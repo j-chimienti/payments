@@ -1,19 +1,23 @@
-package payments.payments.daos
+package payments.lightninginvoices
 
 import com.github.dwickern.macros.NameOf.nameOf
 import com.mathbot.pay.bitcoin.MilliSatoshi
 import com.mathbot.pay.lightning.Bolt11
 import com.mathbot.pay.lightning.lightningcharge.LightningChargeInvoice
-import org.mongodb.scala.model.{Filters, IndexOptions, Indexes}
+import org.mongodb.scala.{Completed, MongoCollection}
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.descending
 import org.mongodb.scala.model.Updates.{combine, set}
+import org.mongodb.scala.model._
 import org.mongodb.scala.result.UpdateResult
-import org.mongodb.scala.{Completed, MongoCollection}
-import payments.payments.models.{Credit, SecureIdentifier}
+import payments.models.SecureIdentifier
+import payments.utils.MongoCollectionTrait
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
+import scala.language.postfixOps
+
+
 case class LightningChargeInvoiceD(
     id: String,
     playerAccountId: SecureIdentifier,

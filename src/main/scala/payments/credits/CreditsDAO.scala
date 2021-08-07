@@ -1,11 +1,12 @@
-package payments.payments.daos
+package payments.credits
 
 import com.github.dwickern.macros.NameOf.nameOf
 import com.mathbot.pay.lightning.Bolt11
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters.{equal, gte}
 import org.mongodb.scala.model.{IndexOptions, Indexes}
-import payments.payments.models.{Credit, SecureIdentifier}
+import payments.models.SecureIdentifier
+import payments.utils.MongoCollectionTrait
 
 import java.time.Instant
 import scala.concurrent.duration.{FiniteDuration, _}

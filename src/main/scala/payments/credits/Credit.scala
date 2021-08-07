@@ -1,11 +1,11 @@
-package payments.payments.models
-
-import java.time.Instant
+package payments.credits
 
 import com.mathbot.pay.bitcoin.Satoshi
-import com.mathbot.pay.json.PlayJsonSupport
 import com.mathbot.pay.lightning.Bolt11
+import payments.models.SecureIdentifier
 import play.api.libs.json._
+
+import java.time.Instant
 
 case class Credit(
     label: String, // ln label
@@ -19,7 +19,7 @@ case class Credit(
     Json.toJson(this).toString()
 }
 
-object Credit extends PlayJsonSupport {
+object Credit {
 
   implicit val formatCredit: Format[Credit] = Json.format[Credit]
 

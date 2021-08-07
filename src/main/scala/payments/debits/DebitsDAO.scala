@@ -1,19 +1,20 @@
-package payments.payments.daos
+package payments.debits
 
 import com.github.dwickern.macros.NameOf.nameOf
 import com.mathbot.pay.lightning.Bolt11
 import com.mathbot.pay.lightning.PayStatus.PayStatus
-import com.mongodb.client.model.ReturnDocument
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters.{equal, gte}
 import org.mongodb.scala.model.Updates.{combine, set}
-import org.mongodb.scala.model.{Filters, FindOneAndUpdateOptions, IndexOptions, Indexes}
-import payments.payments.models.{Debit, SecureIdentifier}
+import org.mongodb.scala.model._
+import payments.models.SecureIdentifier
+import payments.utils.MongoCollectionTrait
 
 import java.time.Instant
-import scala.concurrent.duration._
+import scala.concurrent.duration.{FiniteDuration, _}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
+
 object DebitsDAO {
   val collectionName = "debits"
 

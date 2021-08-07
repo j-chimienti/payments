@@ -1,10 +1,10 @@
-package payments.payments.models
+package payments.models
+
+import com.mathbot.pay.bitcoin.{MilliSatoshi, Satoshi}
+import com.mathbot.pay.lightning.Bolt11
+import play.api.libs.json.Json
 
 import java.time.Instant
-import com.mathbot.pay.bitcoin.{MilliSatoshi, Satoshi}
-import com.mathbot.pay.lightning.PayStatus.PayStatus
-import com.mathbot.pay.lightning.{Bolt11, PayStatus}
-import play.api.libs.json.Json
 
 object ValidDebitRequest {
   implicit val formatValidDebitRequest = Json.format[ValidDebitRequest]

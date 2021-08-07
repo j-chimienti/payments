@@ -1,8 +1,8 @@
-package payments.payments.models
+package payments.debits
 
 import com.mathbot.pay.bitcoin.Satoshi
-import com.mathbot.pay.json.PlayJsonSupport
 import com.mathbot.pay.lightning.{Bolt11, ListPay, PayStatus}
+import payments.models.{SecureIdentifier, ValidDebitRequest}
 import play.api.libs.json._
 
 import java.time.Instant
@@ -19,7 +19,7 @@ case class Debit(
 
 }
 
-object Debit extends PlayJsonSupport {
+object Debit {
 
   implicit val formatDebit: Format[Debit] = Json.format[Debit]
   @throws(classOf[IllegalArgumentException])

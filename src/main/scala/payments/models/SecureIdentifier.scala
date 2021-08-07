@@ -1,4 +1,4 @@
-package payments.payments.models
+package payments.models
 
 import java.security.SecureRandom
 import java.util.Base64

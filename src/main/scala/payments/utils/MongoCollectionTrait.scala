@@ -1,14 +1,15 @@
-package payments.payments.daos
+package payments.utils
 
 import com.github.dwickern.macros.NameOf.nameOf
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Filters.equal
-import org.mongodb.scala.model.Indexes
-import org.mongodb.scala.result.DeleteResult
 import org.mongodb.scala.{Completed, MongoCollection, MongoWriteException}
-import payments.payments.models.{Debit, SecureIdentifier}
+import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.result.DeleteResult
+import payments.debits.Debit
+import payments.models.SecureIdentifier
 
 import scala.concurrent.Future
+import scala.language.postfixOps
 
 trait MongoCollectionTrait[T] {
 
