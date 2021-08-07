@@ -11,9 +11,12 @@ import payments.credits.{Credit, CreditsDAO}
 import payments.debits.{Debit, DebitsDAO}
 import payments.lightninginvoices.{LightningChargeInvoiceD, LightningInvoicesDAO}
 
+import scala.concurrent.ExecutionContext
+
 trait PaymentsDatabaseWiring {
 
   def db: MongoDatabase
+  implicit def executionContext: ExecutionContext
 
   val sic = wire[SecureIdentifierCodec]
   val bic = wire[Bolt11Codec]
