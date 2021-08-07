@@ -2,7 +2,8 @@ package payments.lightninginvoices
 
 import com.github.dwickern.macros.NameOf.nameOf
 import com.mathbot.pay.bitcoin.MilliSatoshi
-import com.mathbot.pay.lightning.Bolt11
+import com.mathbot.pay.lightning.LightningInvoiceStatus.LightningInvoiceStatus
+import com.mathbot.pay.lightning.{Bolt11, LightningInvoiceStatus}
 import com.mathbot.pay.lightning.lightningcharge.LightningChargeInvoice
 import org.mongodb.scala.{Completed, MongoCollection}
 import org.mongodb.scala.model.Filters.equal
@@ -28,7 +29,9 @@ case class LightningChargeInvoiceD(
     status: String,
     paid_at: Option[Instant],
     msatoshi_received: Option[MilliSatoshi]
-)
+) {
+  lazy val invoiceStatus = LightningInvoiceStatus.withName(status)
+}
 
 object LightningChargeInvoiceD {
   def apply(invoice: LightningChargeInvoice, playerAccountId: SecureIdentifier): LightningChargeInvoiceD =
@@ -68,11 +71,12 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningChargeInvoic
                  set(nameOf[LightningChargeInvoiceD](_.status), status))
       .toFutureOption()
 
-  def bulkInsert(invoices: Seq[LightningChargeInvoice], playerAccountId: SecureIdentifier): Future[Option[Completed]] =
-    collection.insertMany(invoices.map(LightningChargeInvoiceD(_, playerAccountId))).toFutureOption()
-
-  def findLatest(latest: Int = 200): Future[Seq[LightningChargeInvoiceD]] =
-    collection.find().sort(descending(nameOf[LightningChargeInvoiceD](_.created_at))).limit(latest).toFuture()
+  def findLatest(perPage: Int = 200, page: Int = 0): Future[Seq[LightningChargeInvoiceD]] =
+    collection.find()
+      .sort(descending(nameOf[LightningChargeInvoiceD](_.created_at)))
+      .skip(page)
+      .limit(perPage)
+      .toFuture()
 
   def update(invoice: LightningChargeInvoice): Future[Option[UpdateResult]] =
     collection
@@ -86,13 +90,14 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningChargeInvoic
       )
       .toFutureOption()
 
-  def findByStatus(status: String): Future[Seq[LightningChargeInvoiceD]] =
-    collection.find(equal(nameOf[LightningChargeInvoiceD](_.status), status)).toFuture()
+  def findByStatus(status: LightningInvoiceStatus): Future[Seq[LightningChargeInvoiceD]] =
+    collection.find(equal(nameOf[LightningChargeInvoiceD](_.status), status.toString)).toFuture()
 
   collection.createIndex(Indexes.ascending(nameOf[LightningChargeInvoiceD](_.id)), IndexOptions().unique(true))
   collection.createIndex(Indexes.ascending(nameOf[LightningChargeInvoiceD](_.bolt11)), IndexOptions().unique(true))
   collection.createIndex(
     Indexes.ascending(nameOf[LightningChargeInvoiceD](_.playerAccountId), nameOf[LightningChargeInvoiceD](_.status))
   )
+  collection.createIndex(Indexes.ascending(nameOf[LightningChargeInvoiceD](_.created_at)))
 
 }
