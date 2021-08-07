@@ -42,5 +42,6 @@ class CreditsDAO(
   collection.createIndex(Indexes.ascending(nameOf[Credit](_.label)), IndexOptions().unique(true))
   collection.createIndex(Indexes.ascending(nameOf[Credit](_.bolt11)), IndexOptions().unique(true))
   collection.createIndex(Indexes.ascending(nameOf[Credit](_.playerAccountId)))
+  collection.createIndex(Indexes.ascending(nameOf[Credit](_.created_at)))
 
 }
