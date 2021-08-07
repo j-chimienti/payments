@@ -1,5 +1,7 @@
 # payments
 
+[![Scala CI](https://github.com/j-chimienti/payments/actions/workflows/scala.yml/badge.svg)](https://github.com/j-chimienti/payments/actions/workflows/scala.yml)
+
 dao and models for payments
 
 ### Usage
