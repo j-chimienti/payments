@@ -1,11 +1,8 @@
 name: Scala CI
 
 on:
-  push:
-    branches:
-      - master
-      - staging
-  pull_request: # all prs
+  - push
+  - pull_request
 
 jobs:
   build:
