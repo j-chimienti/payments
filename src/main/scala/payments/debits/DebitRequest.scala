@@ -12,4 +12,4 @@ import payments.models.SecureIdentifier
  * @param bolt11
  * @param replyTo
  */
-case class DebitRequest(id: SecureIdentifier, playerAccountId: SecureIdentifier, bolt11: Bolt11, replyTo: ActorRef)
+case class DebitRequest(playerAccountId: SecureIdentifier, bolt11: Bolt11, replyTo: Option[ActorRef])

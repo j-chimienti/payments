@@ -14,8 +14,10 @@ case class Debit(
     createdAt: Instant,
     satoshi: Satoshi
 ) {
-  lazy val debitStatus = PayStatus.withName(status)
+  lazy val debitStatus: PayStatus.Value = PayStatus.withName(status)
   override def toString: String = Json.toJson(this).toString()
+  val isCompleteOrPending: Boolean = debitStatus == PayStatus.complete || debitStatus == PayStatus.pending
+
 
 }
 
@@ -30,8 +32,6 @@ object Debit {
     )
     require(payResponse.bolt11.isDefined, s"Invalid list pay -- missing bolt11 $payResponse")
     require(payResponse.bolt11.get == debitRequest.bolt11, s"Invalid bolt11 matching $payResponse $debitRequest")
-    val paymentHash =
-      payResponse.payment_hash.getOrElse(throw new IllegalArgumentException("Invalid listpay missing payment_hash "))
     Debit(
       status = payResponse.status.toString,
       playerAccountId = debitRequest.playerAccountId,
