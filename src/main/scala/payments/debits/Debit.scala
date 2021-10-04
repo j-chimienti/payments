@@ -9,7 +9,7 @@ import java.time.Instant
 
 case class Debit(
     status: String,
-    playerAccountId: SecureIdentifier,
+    playerAccountId: String,
     bolt11: Bolt11,
     createdAt: Instant,
     satoshi: Satoshi
@@ -17,7 +17,6 @@ case class Debit(
   lazy val debitStatus: PayStatus.Value = PayStatus.withName(status)
   override def toString: String = Json.toJson(this).toString()
   val isCompleteOrPending: Boolean = debitStatus == PayStatus.complete || debitStatus == PayStatus.pending
-
 
 }
 

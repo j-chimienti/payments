@@ -9,7 +9,7 @@ import java.time.Instant
 
 case class Credit(
     label: String, // ln label
-    playerAccountId: SecureIdentifier,
+    playerAccountId: String,
     satoshi: Satoshi,
     bolt11: Bolt11,
     created_at: Instant
@@ -23,7 +23,7 @@ object Credit {
 
   implicit val formatCredit: Format[Credit] = Json.format[Credit]
 
-  def apply(invoiceLabel: String, bolt11: Bolt11, playerAccountId: SecureIdentifier): Credit =
+  def apply(invoiceLabel: String, bolt11: Bolt11, playerAccountId: String): Credit =
     Credit(
       label = invoiceLabel,
       playerAccountId = playerAccountId,

@@ -10,7 +10,7 @@ object ValidDebitRequest {
   implicit val formatValidDebitRequest = Json.format[ValidDebitRequest]
 }
 case class ValidDebitRequest(bolt11: Bolt11,
-                             playerAccountId: SecureIdentifier,
+                             playerAccountId: String,
                              msatoshi: MilliSatoshi,
                              availableBalance: MilliSatoshi,
                              fee: Satoshi,

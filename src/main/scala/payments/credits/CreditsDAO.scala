@@ -21,8 +21,10 @@ class CreditsDAO(
 )(implicit ec: ExecutionContext)
     extends MongoCollectionTrait[Credit] {
 
-  def find(playerAccountId: SecureIdentifier): Future[Seq[Credit]] =
+  def find(playerAccountId: String): Future[Seq[Credit]] =
     collection.find(byPlayerAccountId(playerAccountId)).toFuture()
+
+  def findByLabel(label: String) = collection.find(equal(nameOf[Credit](_.label), label)).headOption()
 
   def find(bolt11: Bolt11): Future[Option[Credit]] =
     collection.find(equal(nameOf[Credit](_.bolt11), bolt11.toString)).headOption()
