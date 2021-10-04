@@ -25,7 +25,7 @@ class DebitsDAO(val collection: MongoCollection[Debit])(implicit
 
   def findByStatus(pending: PayStatus) = collection.find(equal(nameOf[Debit](_.status), pending.toString)).toFuture()
 
-  def find(playerAccountId: SecureIdentifier): Future[Seq[Debit]] =
+  def find(playerAccountId: String): Future[Seq[Debit]] =
     collection.find(equal(nameOf[Debit](_.playerAccountId), playerAccountId.toString)).toFuture
 
   def find(bolt11: Bolt11): Future[Option[Debit]] = findBolt11(bolt11.bolt11)
@@ -46,7 +46,7 @@ class DebitsDAO(val collection: MongoCollection[Debit])(implicit
   def findBolt11(bolt11: String): Future[Option[Debit]] =
     collection.find(equal(nameOf[Debit](_.bolt11), bolt11)).headOption
 
-  def findWithin(playerAccountId: SecureIdentifier, time: FiniteDuration): Future[Seq[Debit]] =
+  def findWithin(playerAccountId: String, time: FiniteDuration): Future[Seq[Debit]] =
     collection
       .find(
         Filters.and(
