@@ -54,7 +54,6 @@ val paymodelV = "0ee80e12d0c540781726f8c19aba52d65b316427"
 lazy val paymodel = RootProject(uri(s"https://github.com/JWWeatherman/pay-model.git#$paymodelV"))
 
 
-
 lazy val payments = (project in file("."))
   .settings(commonSettings: _*)
   .configs(IntegrationTest)
