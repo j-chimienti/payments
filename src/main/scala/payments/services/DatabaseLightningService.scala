@@ -2,6 +2,7 @@ package payments.services
 
 import akka.http.scaladsl.util.FastFuture
 import com.mathbot.pay.lightning._
+import com.mathbot.pay.lightning.url.{CreateInvoiceWithDescriptionHash, InvoiceWithDescriptionHash}
 import com.typesafe.scalalogging.StrictLogging
 import payments.debits.{Debit, DebitsDAO}
 import sttp.client3.Response
@@ -43,7 +44,7 @@ class DatabaseLightningService(service: LightningService, debitsDAO: DebitsDAO)(
 
   override def getInfo: Future[Response[Either[LightningRequestError, LightningNodeInfo]]] = service.getInfo
 
-  override def pay(pay: Pay): Future[Response[Either[LightningRequestError, Payment]]] = ???
+  override def pay(pay: Pay): Future[Response[Either[LightningRequestError, Payment]]] = service.pay(pay)
 
   override def listInvoices(l: ListInvoicesRequest): Future[Response[Either[LightningRequestError, Invoices]]] = service.listInvoices(l)
 
@@ -61,4 +62,14 @@ class DatabaseLightningService(service: LightningService, debitsDAO: DebitsDAO)(
 
   override def invoice(inv: LightningInvoice): Future[Response[Either[LightningRequestError, LightningCreateInvoice]]] =
     service.invoice(inv)
+
+  /**
+   * Note bolt11 will differ from the listInvoices since they create the invoice and
+   * override the description hash
+   *
+   * @param i
+   * @return
+   */
+  override def invoiceWithDescriptionHash(i: InvoiceWithDescriptionHash): Future[Response[Either[LightningRequestError, CreateInvoiceWithDescriptionHash]]] =
+    service.invoiceWithDescriptionHash(i)
 }

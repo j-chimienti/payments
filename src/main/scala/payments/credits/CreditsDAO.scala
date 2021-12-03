@@ -24,8 +24,8 @@ class CreditsDAO(
   def find(playerAccountId: SecureIdentifier): Future[Seq[Credit]] =
     collection.find(byPlayerAccountId(playerAccountId)).toFuture()
 
-  def find(bolt11: Bolt11): Future[Option[Credit]] =
-    collection.find(equal(nameOf[Credit](_.bolt11), bolt11.toString)).headOption()
+  def find(paymentHash: String): Future[Option[Credit]] =
+    collection.find(equal(nameOf[Credit](_.paymentHash),paymentHash)).headOption()
 
   def findWithin(timeSpan: FiniteDuration = 1.hour): Future[Seq[Credit]] =
     collection
@@ -40,7 +40,7 @@ class CreditsDAO(
       .toFuture()
 
   collection.createIndex(Indexes.ascending(nameOf[Credit](_.label)), IndexOptions().unique(true))
-  collection.createIndex(Indexes.ascending(nameOf[Credit](_.bolt11)), IndexOptions().unique(true))
+  collection.createIndex(Indexes.ascending(nameOf[Credit](_.paymentHash)), IndexOptions().unique(true))
   collection.createIndex(Indexes.ascending(nameOf[Credit](_.playerAccountId)))
   collection.createIndex(Indexes.ascending(nameOf[Credit](_.created_at)))
 
