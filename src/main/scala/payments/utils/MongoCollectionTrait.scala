@@ -36,5 +36,5 @@ trait MongoCollectionTrait[T] extends StrictLogging {
     }
 
   def byPlayerAccountId(playerAccountId: String) =
-    equal(nameOf[Debit](_.playerAccountId), playerAccountId.toString)
+    equal(nameOf[Debit](_.playerAccountId), playerAccountId)
 }
