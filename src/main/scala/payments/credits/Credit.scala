@@ -2,7 +2,7 @@ package payments.credits
 
 import com.mathbot.pay.bitcoin.{MilliSatoshi, Satoshi}
 import com.mathbot.pay.lightning.{Bolt11, ListInvoice}
-import payments.models.SecureIdentifier
+import payments.lightninginvoices.LightningInvoiceModel
 import play.api.libs.json._
 
 import java.time.Instant
@@ -22,6 +22,16 @@ case class Credit(
 }
 
 object Credit {
+  def apply(invoice: LightningInvoiceModel, playerAccountId: String): Credit =   new Credit(
+    label = invoice.id,
+    playerAccountId = playerAccountId,
+    paymentHash = invoice.paymentHash,
+    satoshi = invoice.bolt11.milliSatoshi.toSatoshi,
+    bolt11 = Some(invoice.bolt11),
+    bolt12 = invoice.bolt12,
+    created_at = Instant.now()
+  )
+
 
   implicit val formatCredit: Format[Credit] = Json.format[Credit]
 

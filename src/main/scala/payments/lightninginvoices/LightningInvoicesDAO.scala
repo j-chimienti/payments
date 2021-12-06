@@ -3,7 +3,7 @@ package payments.lightninginvoices
 import com.github.dwickern.macros.NameOf.nameOf
 import com.mathbot.pay.bitcoin.MilliSatoshi
 import com.mathbot.pay.lightning.LightningInvoiceStatus.LightningInvoiceStatus
-import com.mathbot.pay.lightning.{Bolt11, LightningInvoiceStatus, ListInvoice}
+import com.mathbot.pay.lightning.{Bolt11, LightningCreateInvoice, LightningInvoice, LightningInvoiceStatus, ListInvoice}
 import com.mathbot.pay.lightning.lightningcharge.LightningChargeInvoice
 import com.mathbot.pay.lightning.url.InvoiceWithDescriptionHash
 import org.mongodb.scala.{Completed, MongoCollection}
@@ -24,20 +24,36 @@ case class LightningInvoiceModel(
     playerAccountId: String,
     bolt11: Bolt11,
     description: String,
+    paymentHash: String,
     expires_at: Instant,
     created_at: Instant,
     status: String,
     paid_at: Option[Instant],
-    msatoshi_received: Option[MilliSatoshi]
+    msatoshi_received: Option[MilliSatoshi],
+    bolt12: Option[String] = None
 ) {
   lazy val invoiceStatus = LightningInvoiceStatus.withName(status)
 }
 
 object LightningInvoiceModel {
-  def fromD(invoice: ListInvoice, playerAccountId: String): LightningInvoiceModel =
+  def apply(invoice: LightningCreateInvoice, req: LightningInvoice, playerAccountId: String): LightningInvoiceModel =  LightningInvoiceModel(
+    id = req.label,
+    playerAccountId = playerAccountId,
+    bolt11 = invoice.bolt11,
+    paymentHash = invoice.payment_hash,
+    description = req.description,
+    expires_at = invoice.expires_at,
+    created_at = Instant.now(),
+    status = LightningInvoiceStatus.unpaid.toString,
+    paid_at = None,
+    msatoshi_received = None
+  )
+
+  def apply(invoice: ListInvoice, playerAccountId: String): LightningInvoiceModel =
     LightningInvoiceModel(
       id = invoice.label,
       playerAccountId = playerAccountId,
+      paymentHash = invoice.payment_hash,
       bolt11 = invoice.bolt11.get,
       description = invoice.description,
       expires_at = Instant.ofEpochSecond(invoice.expires_at),
@@ -51,6 +67,7 @@ object LightningInvoiceModel {
     LightningInvoiceModel(
       id = invoice.id,
       playerAccountId = playerAccountId,
+      paymentHash = invoice.rhash,
       bolt11 = invoice.bolt11,
       description = invoice.description,
       expires_at = invoice.expires_at,
@@ -90,6 +107,18 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel
       .skip(page)
       .limit(perPage)
       .toFuture()
+
+  def update(invoice: ListInvoice): Future[Option[UpdateResult]] =
+    collection
+      .updateOne(
+        equal(nameOf[LightningInvoiceModel](_.paymentHash), invoice.payment_hash),
+        combine(
+          set(nameOf[LightningInvoiceModel](_.status), invoice.status.toString),
+          set(nameOf[LightningInvoiceModel](_.paid_at), invoice.paid_at.orNull),
+          set(nameOf[LightningInvoiceModel](_.msatoshi_received), invoice.msatoshi_received.orNull)
+        )
+      )
+      .toFutureOption()
 
   def update(invoice: LightningChargeInvoice): Future[Option[UpdateResult]] =
     collection

@@ -2,7 +2,7 @@ package payments.debits
 
 import com.mathbot.pay.bitcoin.Satoshi
 import com.mathbot.pay.lightning.{Bolt11, ListPay, PayStatus}
-import payments.models.{SecureIdentifier, ValidDebitRequest}
+import payments.models.ValidDebitRequest
 import play.api.libs.json._
 
 import java.time.Instant
@@ -12,7 +12,10 @@ case class Debit(
     playerAccountId: String,
     bolt11: Bolt11,
     createdAt: Instant,
-    satoshi: Satoshi
+    satoshi: Satoshi,
+    label: Option[String] = None,
+    paymentHash: Option[String] = None,
+    modifiedAt: Option[Instant] = None,
 ) {
   lazy val debitStatus: PayStatus.Value = PayStatus.withName(status)
   override def toString: String = Json.toJson(this).toString()
@@ -30,13 +33,14 @@ object Debit {
       s"Invalid debit status ${payResponse.status} expecting ${PayStatus.complete} or ${PayStatus.failed}"
     )
     require(payResponse.bolt11.isDefined, s"Invalid list pay -- missing bolt11 $payResponse")
-    require(payResponse.bolt11.get == debitRequest.bolt11, s"Invalid bolt11 matching $payResponse $debitRequest")
+    require(payResponse.bolt11.get == debitRequest.pay.bolt11, s"Invalid bolt11 matching $payResponse $debitRequest")
     Debit(
       status = payResponse.status.toString,
       playerAccountId = debitRequest.playerAccountId,
-      bolt11 = debitRequest.bolt11,
+      bolt11 = debitRequest.pay.bolt11,
       createdAt = Instant.now(),
-      satoshi = debitRequest.bolt11.milliSatoshi.toSatoshi
+      satoshi = debitRequest.pay.bolt11.milliSatoshi.toSatoshi,
+      paymentHash = payResponse.payment_hash
     )
   }
 
@@ -44,9 +48,10 @@ object Debit {
     Debit(
       status = PayStatus.pending.toString,
       playerAccountId = debitRequest.playerAccountId,
-      bolt11 = debitRequest.bolt11,
+      bolt11 = debitRequest.pay.bolt11,
       createdAt = Instant.now(),
-      satoshi = debitRequest.bolt11.milliSatoshi.toSatoshi
+      satoshi = debitRequest.pay.bolt11.milliSatoshi.toSatoshi,
+      paymentHash = None // todo: hash from bolt11
     )
 
 }
