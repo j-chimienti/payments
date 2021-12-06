@@ -50,7 +50,7 @@ val commonDeps = Seq(
 //  scodec
 ) ++ sttp ++ macwire ++ logging
 
-val paymodelV = "d10c484b1da9cd4146bfb78a8bf9f8eb91e34941"
+val paymodelV = "10db9a802c2b345d7c90e73de499ad1f4f5da8b9"
 lazy val paymodel = RootProject(uri(s"https://github.com/JWWeatherman/pay-model.git#$paymodelV"))
 
 
