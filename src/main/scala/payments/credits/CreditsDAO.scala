@@ -33,6 +33,9 @@ class CreditsDAO(
   def findByPaymentHash(paymentHash: String): Future[Option[Credit]] =
     collection.find(equal(nameOf[Credit](_.paymentHash),paymentHash)).headOption()
 
+  def findByLabel(label: String): Future[Option[Credit]] =
+    collection.find(equal(nameOf[Credit](_.label),label)).headOption()
+
   def findWithin(timeSpan: FiniteDuration = 1.hour): Future[Seq[Credit]] =
     collection
       .find(
