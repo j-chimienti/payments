@@ -3,14 +3,17 @@ package payments.services
 import akka.http.scaladsl.util.FastFuture
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import cats.data.NonEmptyList
+import cats.data.{EitherT, NonEmptyList, OptionT}
+import com.github.dwickern.macros.NameOf.nameOf
 import com.mathbot.pay.lightning._
+import com.mathbot.pay.lightning.lightningcharge.{LightningChargeInvoice, LightningChargeInvoiceRequest, LightningChargeService}
 import com.mathbot.pay.lightning.url.{CreateInvoiceWithDescriptionHash, InvoiceWithDescriptionHash}
 import com.typesafe.scalalogging.StrictLogging
 import payments.credits.{Credit, CreditsDAO}
 import payments.debits.{Debit, DebitsDAO}
 import payments.lightninginvoices.{LightningInvoiceModel, LightningInvoicesDAO}
 import payments.models.ValidDebitRequest
+import play.api.libs.json.Json
 import sttp.client3.Response
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -23,7 +26,6 @@ class DatabaseLightningService private (service: LightningService, debitsDAO: De
 
   //////////////////// CREDITS ////////////////////
 
-  def invoiceWithDescriptionHash()
 
   def invoice(inv: LightningInvoice, playerAccountId: String) =
     for {
@@ -56,6 +58,14 @@ class DatabaseLightningService private (service: LightningService, debitsDAO: De
     } yield r
   }
 
+  def lightningChargeInvoice(invoiceRequest: LightningChargeInvoiceRequest, playerAccountId: String)(lightningChargeService: LightningChargeService): EitherT[Future, String, LightningChargeInvoice] =
+    for {
+      r <- EitherT(lightningChargeService.invoice(invoiceRequest).map(_.body.left.map(_.toString)))
+      j <- OptionT(lightningInvoicesDAO.insert(LightningInvoiceModel(r, playerAccountId)))
+        .toRight("Error")
+
+    } yield r
+
   def checkInvoicesStatus()(implicit m: Materializer)  = {
     for {
     i <- service.listInvoices()
@@ -87,6 +97,8 @@ class DatabaseLightningService private (service: LightningService, debitsDAO: De
     }
     } yield r
   }
+
+
 
   //////////////////// DEBITS ////////////////////
 
