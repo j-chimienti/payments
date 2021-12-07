@@ -23,6 +23,8 @@ class DatabaseLightningService private (service: LightningService, debitsDAO: De
 
   //////////////////// CREDITS ////////////////////
 
+  def invoiceWithDescriptionHash()
+
   def invoice(inv: LightningInvoice, playerAccountId: String) =
     for {
     r <- service.invoice(inv)

@@ -2,13 +2,13 @@ package payments.debits
 
 import com.github.dwickern.macros.NameOf.nameOf
 import com.mathbot.pay.lightning
-import com.mathbot.pay.lightning.{Bolt11, ListPay, Pay, Payment}
 import com.mathbot.pay.lightning.PayStatus.PayStatus
+import com.mathbot.pay.lightning.{Bolt11, ListPay, Payment}
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters.{equal, gte, or}
 import org.mongodb.scala.model.Updates.{combine, currentDate, set}
 import org.mongodb.scala.model._
-import payments.models.{SecureIdentifier, ValidDebitRequest}
+import payments.models.ValidDebitRequest
 import payments.utils.MongoCollectionTrait
 
 import java.time.Instant
@@ -53,6 +53,9 @@ class DebitsDAO(val collection: MongoCollection[Debit])(implicit
   def find(playerAccountId: String): Future[Seq[Debit]] =
     collection.find(equal(nameOf[Debit](_.playerAccountId), playerAccountId)).toFuture
 
+  def findByLabel(label: String): Future[Seq[Debit]] =
+    collection.find(equal(nameOf[Debit](_.label), label)).toFuture
+
   def find(bolt11: Bolt11): Future[Option[Debit]] = findBolt11(bolt11)
 
   def updateOne(pay: ListPay): Future[Option[Debit]] =
@@ -89,6 +92,7 @@ class DebitsDAO(val collection: MongoCollection[Debit])(implicit
 
   {
     collection.createIndex(Indexes.ascending(nameOf[Debit](_.bolt11)), IndexOptions().unique(true)).toFutureOption()
+    collection.createIndex(Indexes.ascending(nameOf[Debit](_.label)), IndexOptions().unique(true)).toFutureOption()
     collection
       .createIndex(Indexes.ascending(nameOf[Debit](_.playerAccountId), nameOf[Debit](_.status)))
       .toFutureOption()
