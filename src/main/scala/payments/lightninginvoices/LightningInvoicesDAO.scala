@@ -3,16 +3,15 @@ package payments.lightninginvoices
 import com.github.dwickern.macros.NameOf.nameOf
 import com.mathbot.pay.bitcoin.MilliSatoshi
 import com.mathbot.pay.lightning.LightningInvoiceStatus.LightningInvoiceStatus
-import com.mathbot.pay.lightning.{Bolt11, LightningCreateInvoice, LightningInvoice, LightningInvoiceStatus, ListInvoice}
 import com.mathbot.pay.lightning.lightningcharge.LightningChargeInvoice
-import com.mathbot.pay.lightning.url.{CreateInvoiceWithDescriptionHash, InvoiceWithDescriptionHash}
-import org.mongodb.scala.{Completed, MongoCollection}
+import com.mathbot.pay.lightning.url.CreateInvoiceWithDescriptionHash
+import com.mathbot.pay.lightning._
+import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.descending
 import org.mongodb.scala.model.Updates.{combine, set}
 import org.mongodb.scala.model._
 import org.mongodb.scala.result.UpdateResult
-import payments.models.SecureIdentifier
 import payments.utils.MongoCollectionTrait
 
 import java.time.Instant

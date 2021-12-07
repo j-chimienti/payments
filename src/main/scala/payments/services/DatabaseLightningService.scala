@@ -4,22 +4,19 @@ import akka.http.scaladsl.util.FastFuture
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import cats.data.{EitherT, NonEmptyList, OptionT}
-import com.github.dwickern.macros.NameOf.nameOf
 import com.mathbot.pay.lightning._
 import com.mathbot.pay.lightning.lightningcharge.{LightningChargeInvoice, LightningChargeInvoiceRequest, LightningChargeService}
-import com.mathbot.pay.lightning.url.{CreateInvoiceWithDescriptionHash, InvoiceWithDescriptionHash}
+import com.mathbot.pay.lightning.url.InvoiceWithDescriptionHash
 import com.typesafe.scalalogging.StrictLogging
 import payments.credits.{Credit, CreditsDAO}
 import payments.debits.{Debit, DebitsDAO}
 import payments.lightninginvoices.{LightningInvoiceModel, LightningInvoicesDAO}
 import payments.models.ValidDebitRequest
-import play.api.libs.json.Json
 import sttp.client3.Response
 
-import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
-class DatabaseLightningService private (service: LightningService, debitsDAO: DebitsDAO, lightningInvoicesDAO: LightningInvoicesDAO, creditsDAO: CreditsDAO)(
+class DatabaseLightningService (service: LightningService, debitsDAO: DebitsDAO, lightningInvoicesDAO: LightningInvoicesDAO, creditsDAO: CreditsDAO)(
   implicit ec: ExecutionContext
 )
   extends StrictLogging {
