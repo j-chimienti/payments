@@ -5,7 +5,7 @@ import com.mathbot.pay.bitcoin.MilliSatoshi
 import com.mathbot.pay.lightning.LightningInvoiceStatus.LightningInvoiceStatus
 import com.mathbot.pay.lightning.{Bolt11, LightningCreateInvoice, LightningInvoice, LightningInvoiceStatus, ListInvoice}
 import com.mathbot.pay.lightning.lightningcharge.LightningChargeInvoice
-import com.mathbot.pay.lightning.url.InvoiceWithDescriptionHash
+import com.mathbot.pay.lightning.url.{CreateInvoiceWithDescriptionHash, InvoiceWithDescriptionHash}
 import org.mongodb.scala.{Completed, MongoCollection}
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.descending
@@ -36,6 +36,20 @@ case class LightningInvoiceModel(
 }
 
 object LightningInvoiceModel {
+  def apply(invoice: CreateInvoiceWithDescriptionHash, li: ListInvoice, playerAccountId: String) = new LightningInvoiceModel(
+    id = li.label,
+    playerAccountId = playerAccountId,
+    bolt11 = invoice.bolt11,
+    description = li.description,
+    paymentHash = invoice.payment_hash,
+    expires_at = invoice.expires_at,
+    created_at = Instant.now(),
+    status = li.status.toString,
+    paid_at = li.paid_at,
+    msatoshi_received = li.msatoshi_received,
+    bolt12 = li.bolt12
+  )
+
   def apply(invoice: LightningCreateInvoice, req: LightningInvoice, playerAccountId: String): LightningInvoiceModel =  LightningInvoiceModel(
     id = req.label,
     playerAccountId = playerAccountId,

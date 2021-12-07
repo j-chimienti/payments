@@ -16,6 +16,7 @@ import payments.models.ValidDebitRequest
 import play.api.libs.json.Json
 import sttp.client3.Response
 
+import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 
 class DatabaseLightningService private (service: LightningService, debitsDAO: DebitsDAO, lightningInvoicesDAO: LightningInvoicesDAO, creditsDAO: CreditsDAO)(
@@ -98,6 +99,26 @@ class DatabaseLightningService private (service: LightningService, debitsDAO: De
     } yield r
   }
 
+  def invoiceWithDescriptionHash(i: InvoiceWithDescriptionHash, playerAccountId: String) = {
+    for {
+      b <- EitherT(
+        service
+          .invoiceWithDescriptionHash(i)
+          .map(_.body.left.map(e => e.toString))
+      )
+      li <- EitherT(
+        service.getInvoice(b.payment_hash)
+          .map {
+            case Left(value) => Left(value.toString)
+            case Right(Some(v)) =>Right(v)
+            case Right(None) => Left("not found")
+          }
+      )
+      invModel = LightningInvoiceModel(b, li, playerAccountId)
+      _ <- OptionT(lightningInvoicesDAO.insert(invModel))
+        .toRight("Unable to insert invoice")
+    } yield (b,li, invModel)
+  }
 
 
   //////////////////// DEBITS ////////////////////
