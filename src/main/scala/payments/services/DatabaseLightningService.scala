@@ -5,7 +5,11 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import cats.data.{EitherT, NonEmptyList, OptionT}
 import com.mathbot.pay.lightning._
-import com.mathbot.pay.lightning.lightningcharge.{LightningChargeInvoice, LightningChargeInvoiceRequest, LightningChargeService}
+import com.mathbot.pay.lightning.lightningcharge.{
+  LightningChargeInvoice,
+  LightningChargeInvoiceRequest,
+  LightningChargeService
+}
 import com.mathbot.pay.lightning.url.InvoiceWithDescriptionHash
 import com.typesafe.scalalogging.StrictLogging
 import payments.credits.{Credit, CreditsDAO}
@@ -15,48 +19,51 @@ import payments.models.ValidDebitRequest
 import sttp.client3.Response
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
-class DatabaseLightningService (service: LightningService, debitsDAO: DebitsDAO, lightningInvoicesDAO: LightningInvoicesDAO, creditsDAO: CreditsDAO)(
-  implicit ec: ExecutionContext
-)
-  extends StrictLogging {
-
+class DatabaseLightningService(service: LightningService,
+                               debitsDAO: DebitsDAO,
+                               lightningInvoicesDAO: LightningInvoicesDAO,
+                               creditsDAO: CreditsDAO)(
+                                implicit ec: ExecutionContext
+                              ) extends StrictLogging {
 
   //////////////////// CREDITS ////////////////////
 
-
   def invoice(inv: LightningInvoice, playerAccountId: String) =
     for {
-    r <- service.invoice(inv)
-    _ <- r.body match {
-      case Left(value) => FastFuture.successful(())
-      case Right(value) =>
-        lightningInvoicesDAO.insert(LightningInvoiceModel(value, inv, playerAccountId))
-    }
+      r <- service.invoice(inv)
+      _ <- r.body match {
+        case Left(value) => FastFuture.successful(())
+        case Right(value) =>
+          lightningInvoicesDAO.insert(LightningInvoiceModel(value, inv, playerAccountId))
+      }
     } yield r
 
   def poll(payment_hash: String, playerAccountId: String) = {
     for {
-    r <- service.getInvoice(payment_hash)
-    j <- r match {
-      case Left(value) => FastFuture.successful(None)
-      case Right(Some(value)) =>
-        value.status match {
-          case LightningInvoiceStatus.unpaid => FastFuture.successful(None)
-          case  LightningInvoiceStatus.paid =>
-            for {
-            _ <- lightningInvoicesDAO.update(value)
-            _ <- creditsDAO.insert(Credit(value, playerAccountId))
-            } yield ()
-          case LightningInvoiceStatus.expired  =>
-           lightningInvoicesDAO.update(value)
-        }
-      case Right(None) => FastFuture.successful(None)
-    }
+      r <- service.getInvoice(payment_hash)
+      j <- r match {
+        case Left(value) => FastFuture.successful(None)
+        case Right(Some(value)) =>
+          value.status match {
+            case LightningInvoiceStatus.unpaid => FastFuture.successful(None)
+            case LightningInvoiceStatus.paid =>
+              for {
+                _ <- lightningInvoicesDAO.update(value)
+                _ <- creditsDAO.insert(Credit(value, playerAccountId))
+              } yield ()
+            case LightningInvoiceStatus.expired =>
+              lightningInvoicesDAO.update(value)
+          }
+        case Right(None) => FastFuture.successful(None)
+      }
     } yield r
   }
 
-  def lightningChargeInvoice(invoiceRequest: LightningChargeInvoiceRequest, playerAccountId: String)(lightningChargeService: LightningChargeService): EitherT[Future, String, LightningChargeInvoice] =
+  def lightningChargeInvoice(invoiceRequest: LightningChargeInvoiceRequest, playerAccountId: String)(
+    lightningChargeService: LightningChargeService
+  ): EitherT[Future, String, LightningChargeInvoice] =
     for {
       r <- EitherT(lightningChargeService.invoice(invoiceRequest).map(_.body.left.map(_.toString)))
       j <- OptionT(lightningInvoicesDAO.insert(LightningInvoiceModel(r, playerAccountId)))
@@ -64,35 +71,60 @@ class DatabaseLightningService (service: LightningService, debitsDAO: DebitsDAO,
 
     } yield r
 
-  def checkInvoicesStatus()(implicit m: Materializer)  = {
+  def updateInvoicesAndCredits()(implicit m: Materializer) = {
     for {
-    i <- service.listInvoices()
-    dbInvs <- i.body match {
-      case Left(value) => FastFuture.successful("")
-      case Right(value) =>
-        logger.info(s"Found ${value.invoices.size} invoices")
-        Source(value.invoices)
-          .mapAsync(10)(
-           i => lightningInvoicesDAO.update(i)
-          ).runWith(Sink.seq)
-    }
+      i <- service.listInvoices()
+      dbInvs <- i.body match {
+        case Left(value) => FastFuture.successful("")
+        case Right(value) =>
+          logger.info(s"Found ${value.invoices.size} invoices")
+          Source(value.invoices)
+            .mapAsync(10)(
+              i => {
+                for {
+                  a <- creditsDAO.update(i).andThen {
+                    case Failure(exception) =>
+                      logger.error(s"CREDIT error ${i.label} $exception")
+                    case Success(value) =>
+                      val msg = value match {
+                        case Some(value) => s"CREDIT updated ${i.label}"
+                        case None => s"CREDIT not found ${i.label}"
+                      }
+                      logger.info(msg)
+                  }
+                  // todo: insert invcoies if description contains some key (need to check player acocunt id)
+                  b <- lightningInvoicesDAO.update(i).andThen {
+                    case Failure(exception) =>
+                      logger.error(s"INVOICE error ${i.label} $exception")
+                    case Success(value) =>
+                      val msg = value match {
+                        case Some(value) => s"INVOICE updated ${i.label}"
+                        case None => s"INVOICE not found ${i.label}"
+                      }
+                      logger.info(msg)
+                  }
+                } yield (a, b)
+
+              }
+            )
+            .runWith(Sink.seq)
+      }
     } yield i
   }
 
   def findMissingCredits() = {
     for {
-    invoices <- lightningInvoicesDAO.findByStatus(LightningInvoiceStatus.paid)
-    credits <- creditsDAO.find()
-    c = credits.flatMap(c => {
-      invoices.find(_.paymentHash == c.paymentHash).map(i =>
-        Credit(i, c.playerAccountId)
-      )
-    })
-    nel = NonEmptyList.fromList(c.toList)
-    r <- nel match {
-      case Some(value) => creditsDAO.insertMany(value)
-      case None => FastFuture.successful("")
-    }
+      invoices <- lightningInvoicesDAO.findByStatus(LightningInvoiceStatus.paid)
+      credits <- creditsDAO.find()
+      c = invoices.map(_.paymentHash).toSet diff credits.map(_.paymentHash).toSet
+      i = c.flatMap(hash => invoices.find(_.paymentHash == hash).map(i => Credit(i)))
+      nel = NonEmptyList.fromList(i.toList)
+      r <- nel match {
+        case Some(value) =>
+          logger.info(s"Found ${value.size} missing credits ${value.map(_.label)}")
+          creditsDAO.insertMany(value)
+        case None => FastFuture.successful("")
+      }
     } yield r
   }
 
@@ -104,57 +136,52 @@ class DatabaseLightningService (service: LightningService, debitsDAO: DebitsDAO,
           .map(_.body.left.map(e => e.toString))
       )
       li <- EitherT(
-        service.getInvoice(b.payment_hash)
+        service
+          .getInvoice(b.payment_hash)
           .map {
             case Left(value) => Left(value.toString)
-            case Right(Some(v)) =>Right(v)
+            case Right(Some(v)) => Right(v)
             case Right(None) => Left("not found")
           }
       )
       invModel = LightningInvoiceModel(b, li, playerAccountId)
       _ <- OptionT(lightningInvoicesDAO.insert(invModel))
         .toRight("Unable to insert invoice")
-    } yield (b,li, invModel)
+    } yield (b, li, invModel)
   }
-
 
   //////////////////// DEBITS ////////////////////
 
-  def checkDebits(implicit m: Materializer) = {
+  def checkDebits(implicit m: Materializer) =
     for {
-    invoicesR <- service.listPays()
-        debits <- debitsDAO.find()
-    debits <- invoicesR.body match {
-      case Left(value) => FastFuture.successful(Seq.empty)
-      case Right(value) =>
-        val d = debits.flatMap(d => value.pays.find(p => d.paymentHash.exists(p.payment_hash.contains) || p.bolt11.contains(d.bolt11))
-          .map(lp => (d, lp))
-        )
-        Source(d)
-        .mapAsync(10)(debit => debitsDAO.updateOne(debit._2))
-        .runWith(Sink.seq)
-    }
+      invoicesR <- service.listPays()
+      _ <- invoicesR.body match {
+        case Left(value) => FastFuture.successful(Seq.empty)
+        case Right(value) =>
+          Source(value.pays)
+            .mapAsync(10)(debit => debitsDAO.updateOne(debit))
+            .runWith(Sink.seq)
+      }
     } yield invoicesR
-  }
-
 
   def lightningPayment(debitRequest: ValidDebitRequest): Future[Response[Either[LightningRequestError, Payment]]] =
     for {
       debitOpt <- debitsDAO.find(bolt11 = debitRequest.pay.bolt11)
-       d <- debitOpt match {
+      d <- debitOpt match {
         case Some(value) => FastFuture.successful(value)
         case None =>
           val d = Debit(debitRequest)
           debitsDAO.insert(d).map(_ => d)
       }
-    r <- service.pay(debitRequest.pay)
-    _ <- r.body match {
-      case Left(value) => FastFuture.successful(None)
-      case Right(value) => debitsDAO.updateOne(value, debitRequest)
-    }
+      r <- service.pay(debitRequest.pay)
+      _ <- r.body match {
+        case Left(value) => FastFuture.successful(None)
+        case Right(value) => debitsDAO.updateOne(value, debitRequest)
+      }
     } yield r
   def updateLightningDebit(bolt11: Bolt11): Future[Either[String, Debit]] =
-      service.listPays(ListPaysRequest(bolt11))
+    service
+      .listPays(ListPaysRequest(bolt11))
       .flatMap(res => {
         if (res.isSuccess)
           res.body match {
@@ -174,5 +201,13 @@ class DatabaseLightningService (service: LightningService, debitsDAO: DebitsDAO,
           FastFuture.successful(Left(msg))
         }
       })
+
+  //// run all
+  def migrate(implicit m: Materializer) =
+    for {
+      r <- checkDebits
+      r1 <- updateInvoicesAndCredits
+      r2 <- findMissingCredits()
+    } yield (r, r1, r2)
 
 }

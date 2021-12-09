@@ -22,30 +22,31 @@ object DebitsDAO {
 }
 class DebitsDAO(val collection: MongoCollection[Debit])(implicit
                                                         ec: ExecutionContext)
-    extends MongoCollectionTrait[Debit] {
-  def updateStatus(bolt11: Bolt11, failed: lightning.PayStatus.Value) =   collection
-    .findOneAndUpdate(
-      equal(nameOf[Debit](_.bolt11),bolt11.bolt11),
-      combine(
-        set(nameOf[Debit](_.status), failed),
-        currentDate(nameOf[Debit](_.modifiedAt))
-      ),
-      FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
-    )
-    .toFutureOption
+  extends MongoCollectionTrait[Debit] {
+  def updateStatus(bolt11: Bolt11, failed: lightning.PayStatus.Value) =
+    collection
+      .findOneAndUpdate(
+        equal(nameOf[Debit](_.bolt11), bolt11.bolt11),
+        combine(
+          set(nameOf[Debit](_.status), failed),
+          currentDate(nameOf[Debit](_.modifiedAt))
+        ),
+        FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
+      )
+      .toFutureOption
 
-  def updateOne(pay: Payment,dr: ValidDebitRequest) =   collection
-    .findOneAndUpdate(
-      equal(nameOf[Debit](_.bolt11),dr.pay.bolt11),
-      combine(
-        set(nameOf[Debit](_.status), pay.status.toString),
-        set(nameOf[Debit](_.paymentHash), pay.payment_hash),
-        currentDate(nameOf[Debit](_.modifiedAt))
-      ),
-      FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
-    )
-    .toFutureOption
-
+  def updateOne(pay: Payment, dr: ValidDebitRequest) =
+    collection
+      .findOneAndUpdate(
+        equal(nameOf[Debit](_.bolt11), dr.pay.bolt11),
+        combine(
+          set(nameOf[Debit](_.status), pay.status.toString),
+          set(nameOf[Debit](_.paymentHash), pay.payment_hash),
+          currentDate(nameOf[Debit](_.modifiedAt))
+        ),
+        FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
+      )
+      .toFutureOption
 
   def find() = collection.find().toFuture()
   def findByStatus(status: PayStatus) = collection.find(equal(nameOf[Debit](_.status), status.toString)).toFuture()
@@ -62,8 +63,9 @@ class DebitsDAO(val collection: MongoCollection[Debit])(implicit
     collection
       .findOneAndUpdate(
         or(
-          equal(nameOf[Debit](_.paymentHash),pay.payment_hash),
-          equal(nameOf[Debit](_.bolt11),pay.bolt11.map(_.bolt11).orNull)
+          equal(nameOf[Debit](_.paymentHash), pay.payment_hash.orNull),
+          equal(nameOf[Debit](_.bolt11), pay.bolt11.map(_.bolt11).orNull),
+          equal(nameOf[Debit](_.label), pay.label.orNull)
         ),
         combine(
           set(nameOf[Debit](_.status), pay.status.toString),
@@ -93,6 +95,9 @@ class DebitsDAO(val collection: MongoCollection[Debit])(implicit
   {
     collection.createIndex(Indexes.ascending(nameOf[Debit](_.bolt11)), IndexOptions().unique(true)).toFutureOption()
     collection.createIndex(Indexes.ascending(nameOf[Debit](_.label)), IndexOptions().unique(true)).toFutureOption()
+    collection
+      .createIndex(Indexes.ascending(nameOf[Debit](_.paymentHash)), IndexOptions().unique(true))
+      .toFutureOption()
     collection
       .createIndex(Indexes.ascending(nameOf[Debit](_.playerAccountId), nameOf[Debit](_.status)))
       .toFutureOption()
