@@ -27,9 +27,9 @@ case class Credit(
 }
 
 object Credit {
-  def apply(invoice: LightningInvoiceModel, playerAccountId: String): Credit =   new Credit(
+  def apply(invoice: LightningInvoiceModel): Credit =   new Credit(
     label = invoice.id,
-    playerAccountId = playerAccountId,
+    playerAccountId = invoice.playerAccountId,
     paymentHash = invoice.paymentHash,
     bolt11 = Some(invoice.bolt11),
     bolt12 = invoice.bolt12,
