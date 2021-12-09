@@ -193,6 +193,7 @@ class DatabaseLightningService(service: LightningService,
     for {
       debitOpt <- debitsDAO.find(bolt11 = debitRequest.pay.bolt11)
       d <- debitOpt match {
+
         case Some(value) => FastFuture.successful(value)
         case None =>
           val d = Debit(debitRequest)
@@ -232,7 +233,7 @@ class DatabaseLightningService(service: LightningService,
     for {
       r <- checkDebits
       r1 <- updateInvoicesAndCredits
-      r2 <- findMissingCredits()
+      r2 <- findMissingCredits(m)
     } yield (r, r1, r2)
 
 }
