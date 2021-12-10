@@ -1,5 +1,6 @@
 package payments.services
 
+import akka.Done
 import akka.http.scaladsl.util.FastFuture
 import akka.stream.{Attributes, Materializer}
 import akka.stream.scaladsl.{Sink, Source}
@@ -39,16 +40,16 @@ class DatabaseLightningService(service: LightningService,
   def poll(payment_hash: String, playerAccountId: String) = {
     for {
       r <- service.getInvoice(payment_hash)
-      j <- r match {
-        case Left(value) => FastFuture.successful(None)
+      _ <- r match {
+        case Left(_) => FastFuture.successful(None)
         case Right(Some(value)) =>
           value.status match {
             case LightningInvoiceStatus.unpaid => FastFuture.successful(None)
             case LightningInvoiceStatus.paid =>
               for {
                 _ <- lightningInvoicesDAO.update(value)
-                _ <- creditsDAO.insert(Credit(value, playerAccountId))
-              } yield ()
+                _ <- creditsDAO.upsert(value, playerAccountId)
+              } yield Done.done()
             case LightningInvoiceStatus.expired =>
               lightningInvoicesDAO.update(value)
           }
@@ -82,22 +83,16 @@ class DatabaseLightningService(service: LightningService,
                     case Failure(exception) =>
                       logger.error(s"CREDIT error ${i.label} $exception")
                     case Success(value) =>
-                      val msg = value match {
-                        case Some(value) => s"CREDIT updated ${i.label}"
-                        case None => s"CREDIT not found ${i.label}"
-                      }
-                      logger.info(msg)
+                      val msg = value.filter(v => v.getModifiedCount > 0).map(ur => s"updated ${i.label}")
+                      msg foreach logger.info
                   }
                   // todo: insert invcoies if description contains some key (need to check player acocunt id)
                   b <- lightningInvoicesDAO.update(i).andThen {
                     case Failure(exception) =>
                       logger.error(s"INVOICE error ${i.label} $exception")
                     case Success(value) =>
-                      val msg = value match {
-                        case Some(value) => s"INVOICE updated ${i.label}"
-                        case None => s"INVOICE not found ${i.label}"
-                      }
-                      logger.info(msg)
+                      val msg = value.filter(v => v.getModifiedCount > 0).map(ur => s"updated ${i.label}")
+                      msg foreach logger.info
                   }
                 } yield (a, b)
 
@@ -167,8 +162,6 @@ class DatabaseLightningService(service: LightningService,
   }
 
   //////////////////// DEBITS ////////////////////
-          import akka.stream.Attributes
-
   def checkDebits(implicit m: Materializer) =
     for {
       invoicesR <- service.listPays()

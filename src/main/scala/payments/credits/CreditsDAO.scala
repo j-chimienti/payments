@@ -21,6 +21,16 @@ class CreditsDAO(
                   val collection: MongoCollection[Credit]
                 )(implicit ec: ExecutionContext)
   extends MongoCollectionTrait[Credit] {
+  def upsert(li: ListInvoice, playerAccountId: String) =
+    for {
+    co <- findByPaymentHash(li.payment_hash)
+    _ <- co match {
+      case Some(_) => update(li)
+      case None => insert(Credit(li, playerAccountId))
+    }
+    } yield Credit(li, playerAccountId)
+
+
   def insertMany(c: NonEmptyList[Credit]) = collection.insertMany(c.toList).toFuture()
 
   def findBulk(value: Seq[String]) = collection.find(in(nameOf[Credit](_.paymentHash), value)).toFuture()
