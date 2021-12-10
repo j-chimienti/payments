@@ -84,7 +84,7 @@ class DatabaseLightningService(service: LightningService,
                       logger.error(s"CREDIT error ${i.label} $exception")
                     case Success(value) =>
                       val msg = value.filter(v => v.getModifiedCount > 0).map(ur => s"updated ${i.label}")
-                      msg foreach logger.info
+                      msg foreach (m => logger.info(m))
                   }
                   // todo: insert invcoies if description contains some key (need to check player acocunt id)
                   b <- lightningInvoicesDAO.update(i).andThen {
@@ -92,7 +92,7 @@ class DatabaseLightningService(service: LightningService,
                       logger.error(s"INVOICE error ${i.label} $exception")
                     case Success(value) =>
                       val msg = value.filter(v => v.getModifiedCount > 0).map(ur => s"updated ${i.label}")
-                      msg foreach logger.info
+                      msg foreach (m => logger.info(m))
                   }
                 } yield (a, b)
 
