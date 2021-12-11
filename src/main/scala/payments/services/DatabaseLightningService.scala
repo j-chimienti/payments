@@ -6,7 +6,11 @@ import akka.stream.{Attributes, Materializer}
 import akka.stream.scaladsl.{Sink, Source}
 import cats.data.{EitherT, NonEmptyList, OptionT}
 import com.mathbot.pay.lightning._
-import com.mathbot.pay.lightning.lightningcharge.{LightningChargeInvoice, LightningChargeInvoiceRequest, LightningChargeService}
+import com.mathbot.pay.lightning.lightningcharge.{
+  LightningChargeInvoice,
+  LightningChargeInvoiceRequest,
+  LightningChargeService
+}
 import com.mathbot.pay.lightning.url.InvoiceWithDescriptionHash
 import com.typesafe.scalalogging.StrictLogging
 import payments.credits.{Credit, CreditsDAO}
@@ -98,11 +102,12 @@ class DatabaseLightningService(service: LightningService,
 
               }
             )
+            .log(name = "invoices and credits update")
             .addAttributes(
-              Attributes.logLevels(
-                onElement = Attributes.LogLevels.Off,
+              Attributes.logLevels(onElement = Attributes.LogLevels.Info,
                 onFinish = Attributes.LogLevels.Info,
-                onFailure = Attributes.LogLevels.Error))
+                onFailure = Attributes.LogLevels.Error)
+            )
             .runWith(Sink.seq)
       }
     } yield i
@@ -113,7 +118,7 @@ class DatabaseLightningService(service: LightningService,
    * Note: run after migrating since find reqire all invoices
    * @return
    */
-  def findMissingCredits(implicit m : Materializer) = {
+  def findMissingCredits(implicit m: Materializer) = {
     for {
       invoices <- lightningInvoicesDAO.findByStatus(LightningInvoiceStatus.paid)
       credits <- creditsDAO.find()
@@ -126,14 +131,15 @@ class DatabaseLightningService(service: LightningService,
           Source(value.toList)
             .grouped(1000)
             .map(l => NonEmptyList.fromList(l.toList))
-            .collect { case Some(s) => s}
-            .mapAsync(1)(v =>
-          creditsDAO.insertMany(v)
-            )    .addAttributes(
-            Attributes.logLevels(
-              onElement = Attributes.LogLevels.Off,
-              onFinish = Attributes.LogLevels.Info,
-              onFailure = Attributes.LogLevels.Error)).runWith(Sink.seq)
+            .collect { case Some(s) => s }
+            .mapAsync(1)(v => creditsDAO.insertMany(v))
+            .log(name = "missing credits")
+            .addAttributes(
+              Attributes.logLevels(onElement = Attributes.LogLevels.Info,
+                onFinish = Attributes.LogLevels.Info,
+                onFailure = Attributes.LogLevels.Error)
+            )
+            .runWith(Sink.seq)
         case None => FastFuture.successful("")
       }
     } yield r
@@ -169,15 +175,14 @@ class DatabaseLightningService(service: LightningService,
         case Left(value) => FastFuture.successful(Seq.empty)
         case Right(value) =>
           Source(value.pays)
-          // note: slow but calling debits can lead to codec errors
+            // note: slow but calling debits can lead to codec errors
             .mapAsync(10)(debit => debitsDAO.updateOne(debit))
-
-          .log(name = "checkDebits")
-          .addAttributes(
-            Attributes.logLevels(
-              onElement = Attributes.LogLevels.Off,
-              onFinish = Attributes.LogLevels.Info,
-              onFailure = Attributes.LogLevels.Error))
+            .log(name = "checkDebits")
+            .addAttributes(
+              Attributes.logLevels(onElement = Attributes.LogLevels.Info,
+                onFinish = Attributes.LogLevels.Info,
+                onFailure = Attributes.LogLevels.Error)
+            )
             .runWith(Sink.seq)
       }
     } yield invoicesR
