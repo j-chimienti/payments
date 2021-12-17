@@ -3,7 +3,7 @@ package payments.debits
 import com.github.dwickern.macros.NameOf.nameOf
 import com.mathbot.pay.lightning
 import com.mathbot.pay.lightning.PayStatus.PayStatus
-import com.mathbot.pay.lightning.{Bolt11, ListPay, Payment}
+import com.mathbot.pay.lightning.{Bolt11, ListPay, PayStatus, Payment}
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.model.Filters.{equal, gte, or}
 import org.mongodb.scala.model.Updates.{combine, currentDate, set}
@@ -23,12 +23,12 @@ object DebitsDAO {
 class DebitsDAO(val collection: MongoCollection[Debit])(implicit
                                                         ec: ExecutionContext)
   extends MongoCollectionTrait[Debit] {
-  def updateStatus(bolt11: Bolt11, failed: lightning.PayStatus.Value) =
+  def updateStatus(bolt11: Bolt11, status: PayStatus.Value) =
     collection
       .findOneAndUpdate(
         equal(nameOf[Debit](_.bolt11), bolt11.bolt11),
         combine(
-          set(nameOf[Debit](_.status), failed),
+          set(nameOf[Debit](_.status), status.toString),
           currentDate(nameOf[Debit](_.modifiedAt))
         ),
         FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
