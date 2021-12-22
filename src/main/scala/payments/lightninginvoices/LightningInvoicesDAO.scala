@@ -53,21 +53,6 @@ object LightningInvoiceModel {
       bolt12 = li.bolt12
     )
 
-  def apply(invoice: LightningCreateInvoice, req: LightningInvoice, playerAccountId: String): LightningInvoiceModel =
-    LightningInvoiceModel(
-      id = req.label,
-      playerAccountId = playerAccountId,
-      bolt11 = invoice.bolt11,
-      paymentHash = invoice.payment_hash,
-      pay_index = None,
-      description = req.description,
-      expires_at = invoice.expires_at,
-      created_at = Instant.now(),
-      status = LightningInvoiceStatus.unpaid.toString,
-      paid_at = None,
-      msatoshi_received = None
-    )
-
   def apply(invoice: ListInvoice, playerAccountId: String): LightningInvoiceModel =
     LightningInvoiceModel(
       id = invoice.label,
@@ -83,20 +68,6 @@ object LightningInvoiceModel {
       msatoshi_received = invoice.msatoshi_received
     )
 
-  def apply(invoice: LightningChargeInvoice, playerAccountId: String): LightningInvoiceModel =
-    LightningInvoiceModel(
-      id = invoice.id,
-      playerAccountId = playerAccountId,
-      paymentHash = invoice.rhash,
-      bolt11 = invoice.bolt11,
-      description = invoice.description,
-      pay_index = invoice.pay_index,
-      expires_at = invoice.expires_at,
-      created_at = invoice.created_at,
-      status = invoice.status.toString,
-      paid_at = invoice.paid_at,
-      msatoshi_received = invoice.msatoshi_received
-    )
 }
 
 object LightningInvoicesDAO {

@@ -2,15 +2,10 @@ package payments.services
 
 import akka.Done
 import akka.http.scaladsl.util.FastFuture
-import akka.stream.{Attributes, Materializer}
 import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.{Attributes, Materializer}
 import cats.data.{EitherT, NonEmptyList, OptionT}
 import com.mathbot.pay.lightning._
-import com.mathbot.pay.lightning.lightningcharge.{
-  LightningChargeInvoice,
-  LightningChargeInvoiceRequest,
-  LightningChargeService
-}
 import com.mathbot.pay.lightning.url.InvoiceWithDescriptionHash
 import com.typesafe.scalalogging.StrictLogging
 import payments.credits.{Credit, CreditsDAO}
@@ -34,12 +29,15 @@ class DatabaseLightningService(service: LightningService,
   def invoice(inv: LightningInvoice, playerAccountId: String) =
     for {
       r <- service.invoice(inv)
-      _ <- r.body match {
-        case Left(value) => FastFuture.successful(())
+      j <- r.body match {
+        case Left(value) => FastFuture.successful(Left(value))
         case Right(value) =>
-          lightningInvoicesDAO.insert(LightningInvoiceModel(value, inv, playerAccountId))
+          for {
+            li <- service.getInvoice(payment_hash = value.payment_hash).map(_.right.get.get)
+            _ <- lightningInvoicesDAO.insert(LightningInvoiceModel(li, playerAccountId))
+          } yield Right(li)
       }
-    } yield r
+    } yield j
 
   def poll(payment_hash: String, playerAccountId: String) = {
     for {
@@ -61,16 +59,6 @@ class DatabaseLightningService(service: LightningService,
       }
     } yield r
   }
-
-  def lightningChargeInvoice(invoiceRequest: LightningChargeInvoiceRequest, playerAccountId: String)(
-    lightningChargeService: LightningChargeService
-  ): EitherT[Future, String, LightningChargeInvoice] =
-    for {
-      r <- EitherT(lightningChargeService.invoice(invoiceRequest).map(_.body.left.map(_.toString)))
-      j <- OptionT(lightningInvoicesDAO.insert(LightningInvoiceModel(r, playerAccountId)))
-        .toRight("Error")
-
-    } yield r
 
   def updateInvoicesAndCredits()(implicit m: Materializer) = {
     for {
