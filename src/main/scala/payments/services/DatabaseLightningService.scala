@@ -6,7 +6,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{Attributes, Materializer}
 import cats.data.{EitherT, NonEmptyList, OptionT}
 import com.mathbot.pay.lightning._
-import com.mathbot.pay.lightning.url.InvoiceWithDescriptionHash
+import com.mathbot.pay.lightning.url.{CreateInvoiceWithDescriptionHash, InvoiceWithDescriptionHash}
 import com.typesafe.scalalogging.StrictLogging
 import payments.credits.{Credit, CreditsDAO}
 import payments.debits.{Debit, DebitsDAO}
@@ -26,7 +26,7 @@ class DatabaseLightningService(service: LightningService,
 
   //////////////////// CREDITS ////////////////////
 
-  def invoice(inv: LightningInvoice, playerAccountId: String) =
+  def invoice(inv: LightningInvoice, playerAccountId: String): Future[Either[LightningRequestError, ListInvoice]] =
     for {
       r <- service.invoice(inv)
       j <- r.body match {
@@ -39,10 +39,10 @@ class DatabaseLightningService(service: LightningService,
       }
     } yield j
 
-  def poll(payment_hash: String, playerAccountId: String) = {
+  def poll(payment_hash: String, playerAccountId: String): Future[Either[LightningRequestError, (ListInvoice, Option[Object])]] = {
     for {
-      r <- service.getInvoice(payment_hash)
-      _ <- r match {
+      invRes <- service.getInvoice(payment_hash)
+      creditOpt <- invRes match {
         case Left(_) => FastFuture.successful(None)
         case Right(Some(value)) =>
           value.status match {
@@ -50,17 +50,21 @@ class DatabaseLightningService(service: LightningService,
             case LightningInvoiceStatus.paid =>
               for {
                 _ <- lightningInvoicesDAO.update(value)
-                _ <- creditsDAO.upsert(value, playerAccountId)
-              } yield Done.done()
+                c <- creditsDAO.upsert(value, playerAccountId)
+              } yield Some(c)
             case LightningInvoiceStatus.expired =>
               lightningInvoicesDAO.update(value)
           }
         case Right(None) => FastFuture.successful(None)
       }
-    } yield r
+    } yield invRes match {
+      case Left(value) => Left(value)
+      case Right(None) => Left(LightningRequestError(ErrorMsg(404, "Not found")))
+      case Right(Some(value)) => Right((value, creditOpt))
+    }
   }
 
-  def updateInvoicesAndCredits()(implicit m: Materializer) = {
+  def updateInvoicesAndCredits()(implicit m: Materializer): Future[Response[Either[LightningRequestError, Invoices]]] = {
     for {
       i <- service.listInvoices()
       dbInvs <- i.body match {
@@ -106,7 +110,7 @@ class DatabaseLightningService(service: LightningService,
    * Note: run after migrating since find reqire all invoices
    * @return
    */
-  def findMissingCredits(implicit m: Materializer) = {
+  def findMissingCredits(implicit m: Materializer): Future[Object] = {
     for {
       invoices <- lightningInvoicesDAO.findByStatus(LightningInvoiceStatus.paid)
       credits <- creditsDAO.find()
@@ -133,7 +137,7 @@ class DatabaseLightningService(service: LightningService,
     } yield r
   }
 
-  def invoiceWithDescriptionHash(i: InvoiceWithDescriptionHash, playerAccountId: String) = {
+  def invoiceWithDescriptionHash(i: InvoiceWithDescriptionHash, playerAccountId: String): EitherT[Future, String, (CreateInvoiceWithDescriptionHash, ListInvoice, LightningInvoiceModel)] = {
     for {
       b <- EitherT(
         service
@@ -156,7 +160,7 @@ class DatabaseLightningService(service: LightningService,
   }
 
   //////////////////// DEBITS ////////////////////
-  def checkDebits(implicit m: Materializer) =
+  def checkDebits(implicit m: Materializer): Future[Response[Either[LightningRequestError, Pays]]] =
     for {
       invoicesR <- service.listPays()
       _ <- invoicesR.body match {
@@ -215,7 +219,7 @@ class DatabaseLightningService(service: LightningService,
       })
 
   //// run all
-  def migrate(implicit m: Materializer) =
+  def migrate(implicit m: Materializer): Future[(Response[Either[LightningRequestError, Pays]], Response[Either[LightningRequestError, Invoices]], Object)] =
     for {
       r <- checkDebits
       r1 <- updateInvoicesAndCredits
