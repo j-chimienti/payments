@@ -39,7 +39,7 @@ class DatabaseLightningService(service: LightningService,
       }
     } yield j
 
-  def poll(payment_hash: String, playerAccountId: String): Future[Either[LightningRequestError, (ListInvoice, Option[Object])]] = {
+  def poll(payment_hash: String, playerAccountId: String): Future[Either[LightningRequestError, (ListInvoice, Option[Credit])]] =
     for {
       invRes <- service.getInvoice(payment_hash)
       creditOpt <- invRes match {
@@ -53,7 +53,7 @@ class DatabaseLightningService(service: LightningService,
                 c <- creditsDAO.upsert(value, playerAccountId)
               } yield Some(c)
             case LightningInvoiceStatus.expired =>
-              lightningInvoicesDAO.update(value)
+              lightningInvoicesDAO.update(value).map(_ => None)
           }
         case Right(None) => FastFuture.successful(None)
       }
@@ -62,7 +62,6 @@ class DatabaseLightningService(service: LightningService,
       case Right(None) => Left(LightningRequestError(ErrorMsg(404, "Not found")))
       case Right(Some(value)) => Right((value, creditOpt))
     }
-  }
 
   def updateInvoicesAndCredits()(implicit m: Materializer): Future[Response[Either[LightningRequestError, Invoices]]] = {
     for {
