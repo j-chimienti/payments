@@ -92,7 +92,7 @@ class DatabaseLightningService(service: LightningService,
             )
             .log(name = "invoices and credits update")
             .addAttributes(
-              Attributes.logLevels(onElement = Attributes.LogLevels.Info,
+              Attributes.logLevels(onElement = Attributes.LogLevels.Debug,
                 onFinish = Attributes.LogLevels.Info,
                 onFailure = Attributes.LogLevels.Error)
             )
@@ -123,7 +123,7 @@ class DatabaseLightningService(service: LightningService,
             .mapAsync(1)(v => creditsDAO.insertMany(v))
             .log(name = "missing credits")
             .addAttributes(
-              Attributes.logLevels(onElement = Attributes.LogLevels.Info,
+              Attributes.logLevels(onElement = Attributes.LogLevels.Debug,
                 onFinish = Attributes.LogLevels.Info,
                 onFailure = Attributes.LogLevels.Error)
             )
@@ -167,7 +167,7 @@ class DatabaseLightningService(service: LightningService,
             .mapAsync(10)(debit => debitsDAO.updateOne(debit))
             .log(name = "checkDebits")
             .addAttributes(
-              Attributes.logLevels(onElement = Attributes.LogLevels.Info,
+              Attributes.logLevels(onElement = Attributes.LogLevels.Debug,
                 onFinish = Attributes.LogLevels.Info,
                 onFailure = Attributes.LogLevels.Error)
             )
