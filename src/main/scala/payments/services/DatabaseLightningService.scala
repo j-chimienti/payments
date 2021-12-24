@@ -8,6 +8,7 @@ import cats.data.{EitherT, NonEmptyList, OptionT}
 import com.mathbot.pay.lightning._
 import com.mathbot.pay.lightning.url.{CreateInvoiceWithDescriptionHash, InvoiceWithDescriptionHash}
 import com.typesafe.scalalogging.StrictLogging
+import org.mongodb.scala.Completed
 import payments.credits.{Credit, CreditsDAO}
 import payments.debits.{Debit, DebitsDAO}
 import payments.lightninginvoices.{LightningInvoiceModel, LightningInvoicesDAO}
@@ -26,42 +27,31 @@ class DatabaseLightningService(service: LightningService,
 
   //////////////////// CREDITS ////////////////////
 
-  def invoice(inv: LightningInvoice, playerAccountId: String): Future[Either[LightningRequestError, ListInvoice]] =
+  def invoice(inv: LightningInvoice, playerAccountId: String): EitherT[Future, LightningRequestError, ListInvoice] =
     for {
-      r <- service.invoice(inv)
-      j <- r.body match {
-        case Left(value) => FastFuture.successful(Left(value))
-        case Right(value) =>
-          for {
-            li <- service.getInvoice(payment_hash = value.payment_hash).map(_.right.get.get)
-            _ <- lightningInvoicesDAO.insert(LightningInvoiceModel(li, playerAccountId))
-          } yield Right(li)
-      }
-    } yield j
+      value <- EitherT(service.invoice(inv).map(_.body))
+      li <- EitherT(service.getInvoice(payment_hash = value.payment_hash))
+      j <- OptionT(lightningInvoicesDAO.insert(LightningInvoiceModel(li, playerAccountId))).toRight(LightningRequestError(ErrorMsg(500, "Error inserting invoice")))
+    } yield li
 
-  def poll(payment_hash: String, playerAccountId: String): Future[Either[LightningRequestError, (ListInvoice, Option[Credit])]] =
+  def poll(payment_hash: String, playerAccountId: String)  = {
+    import LightningInvoiceStatus._
     for {
-      invRes <- service.getInvoice(payment_hash)
-      creditOpt <- invRes match {
-        case Left(_) => FastFuture.successful(None)
-        case Right(Some(value)) =>
-          value.status match {
-            case LightningInvoiceStatus.unpaid => FastFuture.successful(None)
-            case LightningInvoiceStatus.paid =>
-              for {
-                _ <- lightningInvoicesDAO.update(value)
-                c <- creditsDAO.upsert(value, playerAccountId)
-              } yield Some(c)
-            case LightningInvoiceStatus.expired =>
-              lightningInvoicesDAO.update(value).map(_ => None)
-          }
-        case Right(None) => FastFuture.successful(None)
+      value <- EitherT(service.getInvoice(payment_hash))
+      _ <- EitherT.liftF {
+        value.status match {
+          case `paid` =>
+            for {
+              _ <- lightningInvoicesDAO.update(value)
+              _ <- creditsDAO.upsert(value, playerAccountId)
+            } yield ()
+          case `unpaid` => FastFuture.successful(())
+          case `expired` =>
+            lightningInvoicesDAO.update(value).map(_ => ())
+        }
       }
-    } yield invRes match {
-      case Left(value) => Left(value)
-      case Right(None) => Left(LightningRequestError(ErrorMsg(404, "Not found")))
-      case Right(Some(value)) => Right((value, creditOpt))
-    }
+    } yield value
+  }
 
   def updateInvoicesAndCredits()(implicit m: Materializer): Future[Response[Either[LightningRequestError, Invoices]]] = {
     for {
@@ -146,11 +136,7 @@ class DatabaseLightningService(service: LightningService,
       li <- EitherT(
         service
           .getInvoice(b.payment_hash)
-          .map {
-            case Left(value) => Left(value.toString)
-            case Right(Some(v)) => Right(v)
-            case Right(None) => Left("not found")
-          }
+          .map(_.left.map(e => e.toString))
       )
       invModel = LightningInvoiceModel(b, li, playerAccountId)
       _ <- OptionT(lightningInvoicesDAO.insert(invModel))
