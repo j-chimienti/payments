@@ -1,6 +1,5 @@
 package payments.services
 
-import akka.Done
 import akka.http.scaladsl.util.FastFuture
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{Attributes, Materializer}
@@ -8,7 +7,6 @@ import cats.data.{EitherT, NonEmptyList, OptionT}
 import com.mathbot.pay.lightning._
 import com.mathbot.pay.lightning.url.{CreateInvoiceWithDescriptionHash, InvoiceWithDescriptionHash}
 import com.typesafe.scalalogging.StrictLogging
-import org.mongodb.scala.Completed
 import payments.credits.{Credit, CreditsDAO}
 import payments.debits.{Debit, DebitsDAO}
 import payments.lightninginvoices.{LightningInvoiceModel, LightningInvoicesDAO}
@@ -34,7 +32,7 @@ class DatabaseLightningService(service: LightningService,
       j <- OptionT(lightningInvoicesDAO.insert(LightningInvoiceModel(li, playerAccountId))).toRight(LightningRequestError(ErrorMsg(500, "Error inserting invoice")))
     } yield li
 
-  def poll(payment_hash: String, playerAccountId: String)  = {
+  def poll(payment_hash: String, playerAccountId: String): EitherT[Future, LightningRequestError, ListInvoice] = {
     import LightningInvoiceStatus._
     for {
       value <- EitherT(service.getInvoice(payment_hash))
