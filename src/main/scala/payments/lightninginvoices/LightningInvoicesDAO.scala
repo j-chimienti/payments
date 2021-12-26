@@ -63,7 +63,7 @@ object LightningInvoiceModel {
       description = invoice.description,
       expires_at = Instant.ofEpochSecond(invoice.expires_at),
       created_at = Instant.now(),
-      status = LightningInvoiceStatus.unpaid.toString,
+      status = invoice.status.toString,
       paid_at = invoice.paid_at,
       msatoshi_received = invoice.msatoshi_received
     )
