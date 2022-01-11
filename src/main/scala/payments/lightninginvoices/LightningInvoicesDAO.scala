@@ -12,63 +12,14 @@ import org.mongodb.scala.model.Indexes.descending
 import org.mongodb.scala.model.Updates.{combine, set}
 import org.mongodb.scala.model._
 import org.mongodb.scala.result.UpdateResult
+import payments.models.LightningInvoiceModel
 import payments.utils.MongoCollectionTrait
 
 import java.time.Instant
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
-case class LightningInvoiceModel(
-                                  id: String,
-                                  playerAccountId: String,
-                                  bolt11: Bolt11,
-                                  description: String,
-                                  paymentHash: String,
-                                  expires_at: Instant,
-                                  created_at: Instant,
-                                  status: String,
-                                  paid_at: Option[Instant],
-                                  pay_index: Option[Long],
-                                  msatoshi_received: Option[MilliSatoshi],
-                                  bolt12: Option[String] = None,
-                                  local_offer_id: Option[String] = None
-                                ) {
-  lazy val invoiceStatus = LightningInvoiceStatus.withName(status)
-}
 
-object LightningInvoiceModel {
-  def apply(invoice: CreateInvoiceWithDescriptionHash, li: ListInvoice, playerAccountId: String) =
-    new LightningInvoiceModel(
-      id = li.label,
-      playerAccountId = playerAccountId,
-      bolt11 = invoice.bolt11,
-      description = li.description,
-      paymentHash = invoice.payment_hash,
-      expires_at = invoice.expires_at,
-      created_at = Instant.now(),
-      status = li.status.toString,
-      pay_index = None,
-      paid_at = li.paid_at,
-      msatoshi_received = li.msatoshi_received,
-      bolt12 = li.bolt12
-    )
-
-  def apply(invoice: ListInvoice, playerAccountId: String): LightningInvoiceModel =
-    LightningInvoiceModel(
-      id = invoice.label,
-      playerAccountId = playerAccountId,
-      paymentHash = invoice.payment_hash,
-      bolt11 = invoice.bolt11.get,
-      pay_index = invoice.pay_index,
-      description = invoice.description,
-      expires_at = Instant.ofEpochSecond(invoice.expires_at),
-      created_at = Instant.now(),
-      status = invoice.status.toString,
-      paid_at = invoice.paid_at,
-      msatoshi_received = invoice.msatoshi_received
-    )
-
-}
 
 object LightningInvoicesDAO {
   val collectionName = "invoices_lightning"

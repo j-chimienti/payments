@@ -2,14 +2,15 @@ package payments.wiring
 
 import com.softwaremill.macwire.{wire, wireSet}
 import org.bson.codecs.Codec
-import org.bson.codecs.configuration.{CodecProvider, CodecRegistries}
 import org.bson.codecs.configuration.CodecRegistries.{fromProviders, fromRegistries}
-import org.mongodb.scala.{MongoCollection, MongoDatabase}
+import org.bson.codecs.configuration.{CodecProvider, CodecRegistries}
 import org.mongodb.scala.bson.codecs.Macros
+import org.mongodb.scala.{MongoCollection, MongoDatabase}
 import payments.codecs._
 import payments.credits.{Credit, CreditsDAO}
 import payments.debits.{Debit, DebitsDAO}
-import payments.lightninginvoices.{LightningInvoiceModel, LightningInvoicesDAO}
+import payments.lightninginvoices.LightningInvoicesDAO
+import payments.models.LightningInvoiceModel
 
 import scala.concurrent.ExecutionContext
 

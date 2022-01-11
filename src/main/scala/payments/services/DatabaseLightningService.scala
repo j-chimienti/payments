@@ -9,8 +9,8 @@ import com.mathbot.pay.lightning.url.{CreateInvoiceWithDescriptionHash, InvoiceW
 import com.typesafe.scalalogging.StrictLogging
 import payments.credits.{Credit, CreditsDAO}
 import payments.debits.{Debit, DebitsDAO}
-import payments.lightninginvoices.{LightningInvoiceModel, LightningInvoicesDAO}
-import payments.models.ValidDebitRequest
+import payments.lightninginvoices.LightningInvoicesDAO
+import payments.models.{LightningInvoiceModel, ValidDebitRequest}
 import sttp.client3.Response
 
 import scala.concurrent.{ExecutionContext, Future}

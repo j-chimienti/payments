@@ -2,7 +2,7 @@ package payments.credits
 
 import com.mathbot.pay.bitcoin.MilliSatoshi
 import com.mathbot.pay.lightning.{Bolt11, ListInvoice}
-import payments.lightninginvoices.LightningInvoiceModel
+import payments.models.LightningInvoiceModel
 import play.api.libs.json._
 
 import java.time.Instant
