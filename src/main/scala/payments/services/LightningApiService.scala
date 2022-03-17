@@ -82,14 +82,13 @@ class LightningApiService(backend: SttpBackend[Future, AkkaStreams], config: Pay
                   case Some(e) => Left(e)
                   case None =>
                     Left(
-                      LightningRequestError(ErrorMsg(500, s"Not a ${nameOf(LightningRequestError)} $jsonBody"),
-                                            Some(bolt11))
+                      new LightningRequestError(ErrorMsg(500, s"Not a ${nameOf(LightningRequestError)} $jsonBody"))
                     )
                 }
             }
           })
           .getOrElse {
-            Left(LightningRequestError(ErrorMsg(500, s"Not a ${nameOf(LightningRequestError)} $r"), Some(bolt11)))
+            Left(LightningRequestError(ErrorMsg(500, s"Not a ${nameOf(LightningRequestError)} $r")))
           }
       }))
     req.send(backend)

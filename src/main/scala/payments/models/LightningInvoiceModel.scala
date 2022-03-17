@@ -39,7 +39,7 @@ object LightningInvoiceModel extends PlayJsonSupport {
       status = li.status.toString,
       pay_index = None,
       paid_at = li.paid_at,
-      msatoshi_received = li.msatoshi_received,
+      msatoshi_received = li.amount_msat,
       bolt12 = li.bolt12
     )
 
@@ -51,11 +51,11 @@ object LightningInvoiceModel extends PlayJsonSupport {
       bolt11 = invoice.bolt11.get,
       pay_index = invoice.pay_index,
       description = invoice.description,
-      expires_at = Instant.ofEpochSecond(invoice.expires_at),
+      expires_at =  invoice.expires_at,
       created_at = Instant.now(),
       status = invoice.status.toString,
       paid_at = invoice.paid_at,
-      msatoshi_received = invoice.msatoshi_received
+      msatoshi_received = invoice.amount_msat
     )
 
 

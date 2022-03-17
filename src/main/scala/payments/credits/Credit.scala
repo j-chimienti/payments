@@ -52,7 +52,7 @@ object Credit {
       bolt11 = invoice.bolt11,
       bolt12 = invoice.bolt12,
       created_at = Instant.now(), // todo: read from invoice
-      msatoshi_received = invoice.msatoshi_received.get,
+      msatoshi_received = invoice.amount_msat.get,
       paid_at = invoice.paid_at.get,
       pay_index = invoice.pay_index.get,
       local_offer_id = invoice.local_offer_id,

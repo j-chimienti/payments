@@ -52,7 +52,7 @@ class CreditsDAO(
           Updates.set(nameOf[Credit](_.paid_at), invoice.paid_at.orNull),
           Updates.set(nameOf[Credit](_.pay_index), invoice.pay_index.getOrElse(null)),
           Updates.set(nameOf[Credit](_.local_offer_id), invoice.local_offer_id.orNull),
-          Updates.set(nameOf[Credit](_.msatoshi_received), invoice.msatoshi_received.orNull),
+          Updates.set(nameOf[Credit](_.msatoshi_received), invoice.amount_received_msat.orNull),
           Updates.set(nameOf[Credit](_.bolt11), invoice.bolt11.orNull),
           Updates.set(nameOf[Credit](_.bolt12), invoice.bolt12.orNull)
         )

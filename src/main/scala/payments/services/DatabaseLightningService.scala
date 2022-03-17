@@ -28,14 +28,14 @@ class DatabaseLightningService(service: LightningService,
   def invoice(inv: LightningInvoice, playerAccountId: String): EitherT[Future, LightningRequestError, ListInvoice] =
     for {
       value <- EitherT(service.invoice(inv).map(_.body))
-      li <- EitherT(service.getInvoice(payment_hash = value.payment_hash))
+      li <- EitherT(service.getInvoiceByPaymentHash(payment_hash = value.payment_hash).map(_.body))
       j <- OptionT(lightningInvoicesDAO.insert(LightningInvoiceModel(li, playerAccountId))).toRight(LightningRequestError(ErrorMsg(500, "Error inserting invoice")))
     } yield li
 
   def poll(payment_hash: String, playerAccountId: String): EitherT[Future, LightningRequestError, ListInvoice] = {
     import LightningInvoiceStatus._
     for {
-      value <- EitherT(service.getInvoice(payment_hash))
+      value <- EitherT(service.getInvoiceByPaymentHash(payment_hash).map(_.body))
       _ <- EitherT.liftF {
         value.status match {
           case `paid` =>
@@ -133,8 +133,8 @@ class DatabaseLightningService(service: LightningService,
       )
       li <- EitherT(
         service
-          .getInvoice(b.payment_hash)
-          .map(_.left.map(e => e.toString))
+          .getInvoiceByPaymentHash(b.payment_hash)
+          .map(_.body.left.map(e => e.toString))
       )
       invModel = LightningInvoiceModel(b, li, playerAccountId)
       _ <- OptionT(lightningInvoicesDAO.insert(invModel))
