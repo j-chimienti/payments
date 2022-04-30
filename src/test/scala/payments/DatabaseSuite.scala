@@ -19,13 +19,13 @@ abstract class DatabaseSuite
     with PaymentsDatabaseWiring
     with StrictLogging
     with org.scalatest.matchers.should.Matchers {
-  val config = ConfigFactory.load()
+  lazy val config = ConfigFactory.load()
 
   lazy val mongoClient = MongoClient(config.getString("mongodb.url"))
   lazy val db = mongoClient.getDatabase(config.getString("mongodb.name"))
   def dropDb = {
     logger.info(s"Dropping db")
-    val dropR = Await.result(db.drop().toFuture(), 1.seconds)
+    val dropR = Await.result(db.drop().toFuture(), 10.seconds)
     logger.info(s"Dropped db $dropR")
   }
   override def beforeEach(): Unit = {
