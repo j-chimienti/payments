@@ -6,12 +6,13 @@ import org.bson.codecs.configuration.CodecRegistries.{fromProviders, fromRegistr
 import org.bson.codecs.configuration.{CodecProvider, CodecRegistries}
 import org.mongodb.scala.bson.codecs.Macros
 import org.mongodb.scala.{MongoCollection, MongoDatabase}
+import payments.MongoDAO
 import payments.codecs._
 import payments.debits.{LightningPayment, LightningPaymentsDAO}
 import payments.lightninginvoices.LightningInvoicesDAO
 import payments.models.LightningInvoiceModel
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 trait PaymentsDatabaseWiring {
 
@@ -38,7 +39,6 @@ trait PaymentsDatabaseWiring {
     org.mongodb.scala.MongoClient.DEFAULT_CODEC_REGISTRY
   )
 
-
   val lightningPaymentColl: MongoCollection[LightningPayment] = db
     .getCollection[LightningPayment](LightningPaymentsDAO.collectionName)
     .withCodecRegistry(codecRegistry)
@@ -48,5 +48,9 @@ trait PaymentsDatabaseWiring {
       .withCodecRegistry(codecRegistry)
 
   lazy val debitsDao: LightningPaymentsDAO = wire[LightningPaymentsDAO]
-  lazy val invoicesDao = wire[LightningInvoicesDAO]
+  lazy val lightningInvoicesDAO = wire[LightningInvoicesDAO]
+
+  lazy val daos = wireSet[MongoDAO[_]]
+
+  def createIndexes() = Future.sequence(daos.flatMap(d => d.createIndexes().map(_.toFutureOption())))
 }

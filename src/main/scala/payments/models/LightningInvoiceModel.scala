@@ -36,6 +36,7 @@ case class LightningInvoiceModel(
     msatoshi_received: Option[MilliSatoshi]
 ) {
   lazy val invoiceStatus = LightningInvoiceStatus.withName(status)
+  lazy val payStatus = invoiceStatus
 }
 
 object LightningInvoiceModel extends PlayJsonSupport {

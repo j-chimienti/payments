@@ -25,9 +25,16 @@ object LightningInvoicesDAO {
 }
 
 class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel])(implicit
-    val
-    executionContext: ExecutionContext
-) extends MongoDAO[LightningInvoiceModel] {
+                                                                                   val
+                                                                                   executionContext: ExecutionContext)
+    extends MongoDAO[LightningInvoiceModel] {
+  def findByBolt11(bolt11: Bolt11) =
+    collection
+      .find(
+        equal(nameOf[LightningInvoiceModel](_.bolt11), bolt11.bolt11),
+      )
+      .headOption()
+
   val collectionName: String = LightningInvoicesDAO.collectionName
   override val schemaStr = None // todo Some(LightningInvoicesDAO.schema)
 

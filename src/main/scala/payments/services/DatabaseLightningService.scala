@@ -12,11 +12,13 @@ import payments.models.LightningInvoiceModel
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class DatabaseLightningService(service: LightningService,
-                               debitsDAO: LightningPaymentsDAO,
-                               lightningInvoicesDAO: LightningInvoicesDAO)(
-                                implicit ec: ExecutionContext
-                              ) extends StrictLogging {
+class DatabaseLightningService(
+    service: LightningService,
+    debitsDAO: LightningPaymentsDAO,
+    lightningInvoicesDAO: LightningInvoicesDAO
+)(implicit
+    ec: ExecutionContext
+) extends StrictLogging {
 
   //////////////////// CREDITS ////////////////////
 
@@ -24,7 +26,8 @@ class DatabaseLightningService(service: LightningService,
     for {
       value <- EitherT(service.invoice(inv).map(_.body))
       li <- EitherT(service.getInvoiceByPaymentHash(payment_hash = value.payment_hash).map(_.body))
-      j <- OptionT(lightningInvoicesDAO.insert(LightningInvoiceModel(li, playerAccountId))).toRight(LightningRequestError(ErrorMsg(500, "Error inserting invoice")))
+      j <- OptionT(lightningInvoicesDAO.insert(LightningInvoiceModel(li, playerAccountId)))
+        .toRight(LightningRequestError(ErrorMsg(500, "Error inserting invoice")))
     } yield li
 
   def poll(payment_hash: String): EitherT[Future, LightningRequestError, ListInvoice] = {
@@ -41,9 +44,10 @@ class DatabaseLightningService(service: LightningService,
     } yield value
   }
 
-
-
-  def invoiceWithDescriptionHash(i: InvoiceWithDescriptionHash, playerAccountId: String): EitherT[Future, String, (CreateInvoiceWithDescriptionHash, ListInvoice, LightningInvoiceModel)] = {
+  def invoiceWithDescriptionHash(
+      i: InvoiceWithDescriptionHash,
+      playerAccountId: String
+  ): EitherT[Future, String, (CreateInvoiceWithDescriptionHash, ListInvoice, LightningInvoiceModel)] = {
     for {
       b <- EitherT(
         service
@@ -61,10 +65,9 @@ class DatabaseLightningService(service: LightningService,
     } yield (b, li, invModel)
   }
 
-
   def lightningPayment(debitRequest: PlayerPayment__IN) =
     for {
-    // make sure does not exist
+      // make sure does not exist
       _ <- EitherT(debitsDAO.findByBolt11(bolt11 = debitRequest.bolt11) map {
         case None => Right()
         case Some(duplicate) => Left("duplicate")
@@ -75,7 +78,7 @@ class DatabaseLightningService(service: LightningService,
       r <- EitherT(service.pay(Pay(debitRequest.bolt11)).map(_.body.left.map(_.error.message)))
       _ <- OptionT(debitsDAO.updateOne(debitRequest.bolt11, r.status)).toRight(s"error updating debit")
     } yield r
-  def updateLightningDebit(bolt11: Bolt11)  =
+  def updateLightningDebit(bolt11: Bolt11) =
     service
       .listPays(ListPaysRequest(bolt11))
       .flatMap(res => {
@@ -83,33 +86,30 @@ class DatabaseLightningService(service: LightningService,
           res.body match {
             case Left(value) => FastFuture.successful(Left(s"Parsing error ${res.code} ${res.body} $value"))
             case Right(Pays(Seq(listPay))) =>
-              debitsDAO.updateOne(bolt11, listPay) map (
-                r => r.map(d => Right(d)).getOrElse(Left("Not found"))
-                )
+              debitsDAO.updateOne(bolt11, listPay) map (r => r.map(d => Right(d)).getOrElse(Left("Not found")))
             case _ =>
               logger.info(s"Update debit request status to ${PayStatus.failed}")
-              debitsDAO.updateOne(bolt11 = bolt11, status = PayStatus.failed) map (
-                _ => Left(s"Not found ${bolt11}")
-                )
-          } else {
+              debitsDAO.updateOne(bolt11 = bolt11, status = PayStatus.failed) map (_ => Left(s"Not found ${bolt11}"))
+          }
+        else {
           val msg = s"${res.code} received from pay server"
           logger.warn(msg)
           FastFuture.successful(Left(msg))
         }
       })
 
-  def updateLightningDebits(bolt11: Bolt11)  =
+  def updateLightningDebits(bolt11: Bolt11) =
     for {
-    lp <- EitherT(service.listPays(ListPaysRequest(bolt11)).map(_.body.left.map(_ => "error")))
-    jj <- OptionT {
-      lp match  {
-        case Pays(Seq(listPay)) =>
-          debitsDAO.updateOne(bolt11, listPay)
-        case _ =>
-          logger.info(s"Update debit request status to ${PayStatus.failed}")
-          debitsDAO.updateOne(bolt11, PayStatus.failed)
-      }
-    }.toRight("Error updating debit")
+      lp <- EitherT(service.listPays(ListPaysRequest(bolt11)).map(_.body.left.map(_ => "error")))
+      jj <- OptionT {
+        lp match {
+          case Pays(Seq(listPay)) =>
+            debitsDAO.updateOne(bolt11, listPay)
+          case _ =>
+            logger.info(s"Update debit request status to ${PayStatus.failed}")
+            debitsDAO.updateOne(bolt11, PayStatus.failed)
+        }
+      }.toRight("Error updating debit")
     } yield {
       (lp, jj)
     }

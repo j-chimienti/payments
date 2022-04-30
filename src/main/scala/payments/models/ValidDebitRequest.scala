@@ -9,12 +9,14 @@ import java.time.Instant
 object ValidDebitRequest {
   implicit val formatValidDebitRequest = Json.format[ValidDebitRequest]
 }
-case class ValidDebitRequest(pay: Pay,
-                             playerAccountId: String,
-                             msatoshi: MilliSatoshi,
-                             availableBalance: MilliSatoshi,
-                             feeMsat: MilliSatoshi,
-                             createdAt: Instant) {
+case class ValidDebitRequest(
+    pay: Pay,
+    playerAccountId: String,
+    msatoshi: MilliSatoshi,
+    availableBalance: MilliSatoshi,
+    feeMsat: MilliSatoshi,
+    createdAt: Instant
+) {
   override def toString: String = Json.toJson(this).toString()
 
 }
