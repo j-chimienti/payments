@@ -1,13 +1,16 @@
 package payments
 
 import akka.http.scaladsl.util.FastFuture
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
 import com.github.dwickern.macros.NameOf.nameOf
 import com.mongodb.client.model.{Indexes, ReturnDocument}
 import com.typesafe.scalalogging.StrictLogging
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.{FindOneAndUpdateOptions, IndexOptions}
-import org.mongodb.scala.{Completed, MongoCollection, SingleObservable}
+import org.mongodb.scala.{Completed, MongoCollection, MongoDatabase, SingleObservable}
 import payments.debits.LightningPayment
-import play.api.libs.json.JsValue
+import play.api.libs.json.{JsValue, Json}
 
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{ExecutionContext, Future}
@@ -25,11 +28,13 @@ trait MongoDAO[T] extends StrictLogging {
   final val Unique = IndexOptions().unique(true)
   final val ReturnAfter = FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER)
 
+  def createIndex(fieldName: String, unique: Boolean) = {
+    collection.createIndex(Indexes.ascending(fieldName), IndexOptions().unique(unique))
+  }
+
   def expireAfter(t: FiniteDuration): IndexOptions =
     IndexOptions()
       .expireAfter(t.toSeconds, SECONDS)
-
-
 
   def createUniqueBolt11Index() = {
     val n = nameOf[LightningPayment](_.bolt11)
@@ -39,7 +44,7 @@ trait MongoDAO[T] extends StrictLogging {
   }
 
   def createTokenIdAndStatusIndex() = {
-    val t = nameOf[LightningPayment](_.tokenId)
+    val t = nameOf[LightningPayment](_.metadata)
     val s = nameOf[LightningPayment](_.status)
     collection.createIndex(Indexes.ascending(t, s))
   }
@@ -91,4 +96,53 @@ trait MongoDAO[T] extends StrictLogging {
   //    }
   //
   //  }
+}
+
+object MongoDAO extends StrictLogging {
+
+  object ValidationLevels extends Enumeration {
+    type ValidationLevels = Value
+    val strict, moderate = Value
+  }
+
+  def dropIndexes(c: Set[MongoCollection[_]])(implicit m: Materializer) =
+    Source(c)
+      .mapAsyncUnordered(3)(c =>
+        c.dropIndexes()
+          .map(r => Some(r))
+          .recover(err => {
+            logger.warn("Error dropping index error={}", err)
+            None
+          })
+          .toFuture()
+      )
+      .runWith(Sink.seq)
+
+  def removeValidation[T](db: MongoDatabase, collectionName: String) = {
+    db.runCommand(
+      BsonDocument(Json.obj("collMod" -> collectionName, "validationLevel" -> "off").toString)
+    ).toFutureOption()
+  }
+
+  def createSchema(
+      jsonSchema: JsValue,
+      collectionName: String,
+      level: ValidationLevels.ValidationLevels,
+      validationAction: String = "error"
+  )(db: MongoDatabase) = {
+    db.runCommand(
+      BsonDocument(
+        Json
+          .obj(
+            "collMod" -> collectionName,
+            "validator" -> Json.obj(
+              "$jsonSchema" -> jsonSchema
+            ),
+            "validationLevel" -> level.toString,
+            "validationAction" -> validationAction
+          )
+          .toString
+      )
+    ).toFutureOption()
+  }
 }

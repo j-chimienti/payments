@@ -1,0 +1,85 @@
+{
+    "bsonType": "object",
+    "additionalProperties": true,
+    "required": [
+        "tokenId",
+        "status",
+        "label",
+        "bolt11",
+        "starSystem",
+        "expires_at"
+    ],
+    "properties": {
+        "tokenId": {
+            "bsonType": "string"
+        },
+        "status": {
+            "enum": [
+                "unpaid",
+                "paid",
+                "expired"
+            ],
+            "description": "LightningInvoiceStatus"
+        },
+        "label": {
+            "bsonType": "string"
+        },
+        "bolt11": {
+            "bsonType": "string",
+            "pattern": "^lnbc"
+        },
+        "bolt12": {
+            "bsonType": [
+                "null",
+                "string"
+            ]
+        },
+        "starSystem": {
+            "bsonType": "string"
+        },
+        "pay_index": {
+            "oneOf": [
+                {
+                    "bsonType": "long",
+                    "minimum": 0
+                },
+                {
+                    "bsonType": "null"
+                }
+            ]
+        },
+        "amount_received_msat": {
+            "oneOf": [
+                {
+                    "bsonType": "long",
+                    "minimum": 0
+                },
+                {
+                    "bsonType": "null"
+                }
+            ]
+        },
+        "amount_msat": {
+            "oneOf": [
+                {
+                    "bsonType": "long",
+                    "minimum": 0
+                },
+                {
+                    "bsonType": "null"
+                }
+            ]
+        },
+        "payment_hash": {
+            "oneOf": [
+                {
+                    "bsonType": "null"
+                },
+                {
+                    "bsonType": "string",
+                    "pattern": "[A-Fa-f0-9]{64}"
+                }
+            ]
+        }
+    }
+}

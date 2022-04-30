@@ -13,21 +13,20 @@ import play.api.libs.json.Json
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class LightningPaymentsDAO(val collection: MongoCollection[LightningPayment])(
-  implicit val executionContext: ExecutionContext
+class LightningPaymentsDAO(val collection: MongoCollection[LightningPayment])(implicit
+    val executionContext: ExecutionContext
 ) extends MongoDAO[LightningPayment] {
   val collectionName = LightningPaymentsDAO.collectionName
   def findByBolt11(bolt11: Bolt11): Future[Option[LightningPayment]] =
     collection.find(equal(nameOf[LightningPayment](_.bolt11), bolt11.toString)).headOption
 
-  def updateOne(bolt11: Bolt11,
-                status: PayStatus): Future[Option[UpdateResult]] =
+  def updateOne(bolt11: Bolt11, status: PayStatus): Future[Option[UpdateResult]] =
     collection
       .updateOne(
         equal(nameOf[LightningPayment](_.bolt11), bolt11.bolt11),
         Updates.combine(
           currentDate(nameOf[LightningPayment](_.updatedAt)),
-          Updates.set(nameOf[LightningPayment](_.status), status.toString),
+          Updates.set(nameOf[LightningPayment](_.status), status.toString)
         )
       )
       .toFutureOption()
@@ -39,19 +38,19 @@ class LightningPaymentsDAO(val collection: MongoCollection[LightningPayment])(
     collection.find(equal(nameOf[LightningPayment](_.status), PayStatus.pending.toString)).toFuture()
   override def createIndexes() = {
     createUniqueBolt11Index() ::
-      createUniqueLabelIndex() ::
-      createTokenIdAndStatusIndex() :: Nil
+    createUniqueLabelIndex() ::
+    createTokenIdAndStatusIndex() :: Nil
   }
 
   override def insert(t: LightningPayment): Future[Option[Completed]] =
-    super.insert(t.copy(payment_hash = Some(t.paymentHash)))
+    super.insert(t.copy(payment_hash = (t.paymentHash)))
 
-  override val schemaStr = None // todo
+  override val schemaStr = None // todo  Some(LightningPaymentsDAO.schemaStr)
 }
 
 object LightningPaymentsDAO {
 
-//  lazy val schemaStr =
-//    Json.parse(scala.io.Source.fromResource("schemas/lightning_payments.bsonSchema.json").getLines().mkString(""))
+  lazy val schemaStr =
+    Json.parse(scala.io.Source.fromResource("schemas/lightning_payments.bsonSchema.json").getLines().mkString(""))
   final val collectionName = "lightning_payments"
 }

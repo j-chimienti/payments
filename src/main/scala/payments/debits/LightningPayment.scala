@@ -10,65 +10,61 @@ object LightningPayment {
   def pending(p: PayService.PlayerPayment__IN): LightningPayment = {
     val n = Instant.now()
     new LightningPayment(
-      tokenId = p.playerId,
+      metadata = p.playerId,
       label = Some(p.label),
       status = PayStatus.pending.toString,
       amount_msat = p.bolt11.milliSatoshi,
-      createdAt = n,
+      created = n,
       bolt11 = p.bolt11,
       amount_sent_msat = p.bolt11.milliSatoshi,
-      preimage = None,
-      payment_hash = Some(p.bolt11.invoice.paymentHash.toString),
+      payment_hash = (p.bolt11.invoice.paymentHash.toString),
       updatedAt = n
     )
   }
 
   lazy implicit val formatDebit: OFormat[LightningPayment] = Json.format[LightningPayment]
 
-  def apply(listPay: ListPay, tokenId: String): LightningPayment = new LightningPayment(
-    tokenId = tokenId,
-    label = listPay.label,
-    status = listPay.status.toString,
-    amount_msat = listPay.amount_msat.get,
-    createdAt = listPay.created_at,
-    bolt11 = listPay.bolt11.get,
-    amount_sent_msat = listPay.amount_sent_msat,
-    preimage = listPay.preimage,
-    payment_hash = listPay.payment_hash,
-    updatedAt = Instant.now()
-  )
+  def apply(listPay: ListPay, tokenId: String): LightningPayment =
+    new LightningPayment(
+      metadata = tokenId,
+      label = listPay.label,
+      status = listPay.status.toString,
+      amount_msat = listPay.amount_msat.get, // todo .get
+      created = listPay.created_at,
+      bolt11 = listPay.bolt11.get,
+      amount_sent_msat = listPay.amount_sent_msat,
+      payment_hash = listPay.payment_hash.get,
+      updatedAt = Instant.now()
+    )
 
 }
 
 /**
- *
- * copy of [[com.mathbot.pay.lightning.ListPay]] for use to insert into db and add player info
- * @param tokenId PlayerAccount.tokenId
+ * DAO for [[ListPay]] for use to insert into db and add player info
+ * @param metadata associated with payment
  * @param label self generated id
  * @param status [[PayStatus]] in string format for mongo serialization issues w/ enums
  * @param amount_msat to debit player
- * @param createdAt
+ * @param created
  * @param bolt11 of sent payment to player
  * @param amount_sent_msat total sent for invoice with fees eg 1001msat
- * @param preimage of payment
  * @param payment_hash of payment
  */
 case class LightningPayment(
-                             tokenId: String,
-                             status: String,
-                             label: Option[String],
-                             amount_msat: MilliSatoshi,
-                             createdAt: Instant,
-                             bolt11: Bolt11,
-                             amount_sent_msat: MilliSatoshi,
-                             preimage: Option[String],
-                             payment_hash: Option[String],
-                             updatedAt: Instant
-                           ) {
+    metadata: String,
+    status: String,
+    label: Option[String],
+    amount_msat: MilliSatoshi,
+    bolt11: Bolt11,
+    amount_sent_msat: MilliSatoshi,
+    payment_hash: String,
+    created: Instant,
+    updatedAt: Instant
+) {
   val payStatus: PayStatus.Value = PayStatus.withName(status)
   val msatoshi: MilliSatoshi = amount_msat
   val isCompleteOrPending: Boolean = payStatus == PayStatus.complete || payStatus == PayStatus.pending
-  val bolt11Invoice = bolt11.invoice
-  val paymentHash = bolt11Invoice.paymentHash.toString
+  val invoice = bolt11.invoice
+  val paymentHash = invoice.paymentHash.toString
   override def toString: String = Json.toJson(this).toString()
 }

@@ -1,0 +1,59 @@
+{
+    "bsonType": "object",
+    "required": [
+        "tokenId",
+        "status",
+        "bolt11",
+        "amount_msat",
+        "label",
+        "createdAt",
+        "updatedAt",
+        "amount_sent_msat"
+    ],
+    "properties": {
+        "tokenId": {
+            "bsonType": "string"
+        },
+        "status": {
+            "enum": [
+                "complete",
+                "failed",
+                "pending",
+                "paid"
+            ],
+            "description": "PayStatus"
+        },
+        "bolt11": {
+            "bsonType": "string",
+            "pattern": "^lnbc"
+        },
+        "createdAt": {
+            "bsonType": "date"
+        },
+        "updatedAt": {
+            "bsonType": "date"
+        },
+        "label": {
+            "bsonType": "string"
+        },
+        "amount_msat": {
+            "bsonType": "long",
+            "minimum": 0
+        },
+        "amount_sent_msat": {
+            "bsonType": "long",
+            "minimum": 0
+        },
+        "payment_hash": {
+            "oneOf": [
+                {
+                    "bsonType": "string",
+                    "pattern": "[A-Fa-f0-9]{64}"
+                },
+                {
+                    "bsonType": "null"
+                }
+            ]
+        }
+    }
+}

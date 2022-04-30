@@ -11,32 +11,42 @@ import org.mongodb.scala.result.UpdateResult
 import org.mongodb.scala.{MongoCollection, SingleObservable}
 import payments.MongoDAO
 import payments.models.LightningInvoiceModel
+import play.api.libs.json.Json
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.io.Source
 import scala.language.postfixOps
-
-
 
 object LightningInvoicesDAO {
   val collectionName = "invoices_lightning"
 
+  val schema = Json.parse(Source.fromResource("schemas/lightning_invoices.bsonSchema.json").getLines().mkString(""))
+
 }
 
-class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel])(implicit val
-                                                                                   executionContext: ExecutionContext)
-  extends MongoDAO[LightningInvoiceModel] {
+class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel])(implicit
+    val
+    executionContext: ExecutionContext
+) extends MongoDAO[LightningInvoiceModel] {
+  val collectionName: String = LightningInvoicesDAO.collectionName
+  override val schemaStr = None // todo Some(LightningInvoicesDAO.schema)
 
-  def findByIdAndPlayer(id: String, playerAccountId: String): Future[Option[LightningInvoiceModel]] =
+  def findByIdAndPlayer(label: String, playerAccountId: String): Future[Option[LightningInvoiceModel]] =
     collection
       .find(
-        Filters.and(equal(nameOf[LightningInvoiceModel](_.id), id),
-          equal(nameOf[LightningInvoiceModel](_.playerAccountId), playerAccountId))
+        Filters.and(
+          equal(nameOf[LightningInvoiceModel](_.label), label),
+          equal(nameOf[LightningInvoiceModel](_.metadata), playerAccountId)
+        )
       )
       .headOption()
 
-  def updateStatus(id: String, status: String): Future[Option[UpdateResult]] =
+  def updateStatus(label: String, status: String): Future[Option[UpdateResult]] =
     collection
-      .updateOne(equal(nameOf[LightningInvoiceModel](_.id), id), set(nameOf[LightningInvoiceModel](_.status), status))
+      .updateOne(
+        equal(nameOf[LightningInvoiceModel](_.label), label),
+        set(nameOf[LightningInvoiceModel](_.status), status)
+      )
       .toFutureOption()
 
   def findLatest(perPage: Int = 200, page: Int = 0): Future[Seq[LightningInvoiceModel]] =
@@ -50,39 +60,27 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel
   def update(invoice: ListInvoice): Future[Option[UpdateResult]] =
     collection
       .updateOne(
-        or(
-          equal(nameOf[LightningInvoiceModel](_.paymentHash), invoice.payment_hash),
-          equal(nameOf[LightningInvoiceModel](_.bolt11), invoice.bolt11.orNull),
-          equal(nameOf[LightningInvoiceModel](_.id), invoice.label),
-        ),
+        equal(nameOf[LightningInvoiceModel](_.payment_hash), invoice.payment_hash),
         combine(
           set(nameOf[LightningInvoiceModel](_.status), invoice.status.toString),
           set(nameOf[LightningInvoiceModel](_.paid_at), invoice.paid_at.orNull),
           set(nameOf[LightningInvoiceModel](_.pay_index), invoice.pay_index.getOrElse(null)),
-          set(nameOf[LightningInvoiceModel](_.paymentHash), invoice.payment_hash),
-          set(nameOf[LightningInvoiceModel](_.description), invoice.description),
           set(nameOf[LightningInvoiceModel](_.msatoshi_received), invoice.amount_received_msat.getOrElse(null))
         )
       )
       .toFutureOption()
 
-
-
   def findByStatus(status: LightningInvoiceStatus): Future[Seq[LightningInvoiceModel]] =
     collection.find(equal(nameOf[LightningInvoiceModel](_.status), status.toString)).toFuture()
 
-
   override def createIndexes(): List[SingleObservable[String]] =
     List(
-      collection.createIndex(Indexes.ascending(nameOf[LightningInvoiceModel](_.id)), IndexOptions().unique(true)),
-        collection.createIndex(Indexes.ascending(nameOf[LightningInvoiceModel](_.bolt11)), IndexOptions().unique(true)),
-  collection.createIndex(
-    Indexes.ascending(nameOf[LightningInvoiceModel](_.playerAccountId), nameOf[LightningInvoiceModel](_.status))
-  ),
-  collection.createIndex(Indexes.ascending(nameOf[LightningInvoiceModel](_.created_at)))
-
-  )
-  val collectionName: String = LightningInvoicesDAO.collectionName
-  override val schemaStr = None // todo
+      createIndex(nameOf[LightningInvoiceModel](_.label), true),
+      createIndex(nameOf[LightningInvoiceModel](_.bolt11), true),
+      collection.createIndex(
+        Indexes.ascending(nameOf[LightningInvoiceModel](_.metadata), nameOf[LightningInvoiceModel](_.status))
+      ),
+      collection.createIndex(Indexes.ascending(nameOf[LightningInvoiceModel](_.created_at)))
+    )
 
 }
