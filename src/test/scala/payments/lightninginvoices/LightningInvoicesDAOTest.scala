@@ -74,7 +74,7 @@ class LightningInvoicesDAOTest extends DatabaseSuite {
       assert(r.getError.getCode === 11000)
     }
   }
-  "insert fails with duplicate payment_hash" in {
+  "insert works with duplicate payment_hash" in {
     val updated = l.copy(
       label = "new label",
       bolt11 = Bolt11(
@@ -83,14 +83,15 @@ class LightningInvoicesDAOTest extends DatabaseSuite {
       payment_hash = l.payment_hash
     )
     for {
+      c0 <- lightningInvoicesDAO.count
       _ <- lightningInvoicesDAO.insert(l)
-      r <- recoverToExceptionIf[MongoWriteException] {
-        lightningInvoicesDAO.insert(
-          updated
-        )
-      }
+      c1 <- lightningInvoicesDAO.count
+      r <- lightningInvoicesDAO.insert(updated)
+      c2 <- lightningInvoicesDAO.count
     } yield {
-      assert(r.getError.getCode === 11000)
+      assert(c0 == 0)
+      assert(c1 == 1)
+      assert(c2 == 2)
     }
   }
   "insert works with non duplicate label,bolt11,payment_hash" in {

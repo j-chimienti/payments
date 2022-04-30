@@ -32,14 +32,7 @@ abstract class DatabaseSuite
     dropDb
     // todo: creating indexes succeedes but always times out
     val ci = Try(Await.result(createIndexes(), 10.seconds))
-    logger.info(s"Creeat indexes = {}", ci)
+    logger.info(s"Create indexes = {}", ci)
   }
 
-  override def afterAll(): Unit = {
-    dropDb
-    logger.info(s"Close mongo connection")
-    mongoClient.close()
-    logger.info(s"Closed mongo connection")
-
-  }
 }
