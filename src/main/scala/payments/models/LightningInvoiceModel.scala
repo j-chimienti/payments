@@ -1,9 +1,9 @@
 package payments.models
 
-import com.mathbot.pay.bitcoin.MilliSatoshi
 import com.mathbot.pay.json.PlayJsonSupport
-import com.mathbot.pay.lightning.{Bolt11, LightningInvoiceStatus, ListInvoice}
 import com.mathbot.pay.lightning.url.CreateInvoiceWithDescriptionHash
+import com.mathbot.pay.lightning.{Bolt11, LightningInvoiceStatus, ListInvoice}
+import fr.acinq.eclair.MilliSatoshi
 import play.api.libs.json.Json
 
 import java.time.Instant

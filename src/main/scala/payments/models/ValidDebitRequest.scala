@@ -1,7 +1,7 @@
 package payments.models
 
-import com.mathbot.pay.bitcoin.{MilliSatoshi, Satoshi}
-import com.mathbot.pay.lightning.{Bolt11, Pay}
+import com.mathbot.pay.lightning.Pay
+import fr.acinq.eclair.MilliSatoshi
 import play.api.libs.json.Json
 
 import java.time.Instant
@@ -13,7 +13,7 @@ case class ValidDebitRequest(pay: Pay,
                              playerAccountId: String,
                              msatoshi: MilliSatoshi,
                              availableBalance: MilliSatoshi,
-                             fee: Satoshi,
+                             feeMsat: MilliSatoshi,
                              createdAt: Instant) {
   override def toString: String = Json.toJson(this).toString()
 

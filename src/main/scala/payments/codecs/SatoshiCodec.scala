@@ -1,6 +1,6 @@
 package payments.codecs
 
-import com.mathbot.pay.bitcoin.Satoshi
+import fr.acinq.bitcoin.Satoshi
 import org.bson.codecs.{Codec, DecoderContext, EncoderContext}
 import org.bson.{BsonReader, BsonWriter}
 

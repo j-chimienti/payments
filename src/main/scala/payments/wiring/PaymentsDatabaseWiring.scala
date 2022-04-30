@@ -7,8 +7,7 @@ import org.bson.codecs.configuration.{CodecProvider, CodecRegistries}
 import org.mongodb.scala.bson.codecs.Macros
 import org.mongodb.scala.{MongoCollection, MongoDatabase}
 import payments.codecs._
-import payments.credits.{Credit, CreditsDAO}
-import payments.debits.{Debit, DebitsDAO}
+import payments.debits.{LightningPayment, LightningPaymentsDAO}
 import payments.lightninginvoices.LightningInvoicesDAO
 import payments.models.LightningInvoiceModel
 
@@ -27,8 +26,7 @@ trait PaymentsDatabaseWiring {
   val codecs: Set[Codec[_]] = wireSet[Codec[_]]
 
   lazy val mongoCodecProviders: Seq[CodecProvider] = Seq(
-    Macros.createCodecProvider[Credit](),
-    Macros.createCodecProvider[Debit](),
+    Macros.createCodecProvider[LightningPayment](),
     Macros.createCodecProvider[LightningInvoiceModel]()
   )
 
@@ -40,19 +38,15 @@ trait PaymentsDatabaseWiring {
     org.mongodb.scala.MongoClient.DEFAULT_CODEC_REGISTRY
   )
 
-  val creditColl: MongoCollection[Credit] = db
-    .getCollection[Credit](CreditsDAO.collectionName)
-    .withCodecRegistry(codecRegistry)
 
-  val debitColl: MongoCollection[Debit] = db
-    .getCollection[Debit](DebitsDAO.collectionName)
+  val lightningPaymentColl: MongoCollection[LightningPayment] = db
+    .getCollection[LightningPayment](LightningPaymentsDAO.collectionName)
     .withCodecRegistry(codecRegistry)
 
   val lnInvColl: MongoCollection[LightningInvoiceModel] =
     db.getCollection[LightningInvoiceModel](LightningInvoicesDAO.collectionName)
       .withCodecRegistry(codecRegistry)
 
-  lazy val creditsDao: CreditsDAO = wire[CreditsDAO]
-  lazy val debitsDao: DebitsDAO = wire[DebitsDAO]
+  lazy val debitsDao: LightningPaymentsDAO = wire[LightningPaymentsDAO]
   lazy val invoicesDao = wire[LightningInvoicesDAO]
 }
