@@ -47,7 +47,7 @@ trait PaymentsDatabaseWiring {
     db.getCollection[LightningInvoiceModel](LightningInvoicesDAO.collectionName)
       .withCodecRegistry(codecRegistry)
 
-  lazy val debitsDao: LightningPaymentsDAO = wire[LightningPaymentsDAO]
+  lazy val lightningPaymentsDAO: LightningPaymentsDAO = wire[LightningPaymentsDAO]
   lazy val lightningInvoicesDAO = wire[LightningInvoicesDAO]
 
   lazy val daos = wireSet[MongoDAO[_]]

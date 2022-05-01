@@ -1,9 +1,9 @@
 package payments.lightninginvoices
 
 import com.github.dwickern.macros.NameOf.nameOf
+import com.mathbot.pay.lightning.Bolt11
 import com.mathbot.pay.lightning.LightningInvoiceStatus.LightningInvoiceStatus
-import com.mathbot.pay.lightning._
-import org.mongodb.scala.model.Filters.{equal, or}
+import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.descending
 import org.mongodb.scala.model.Updates.{combine, set}
 import org.mongodb.scala.model._
@@ -35,24 +35,31 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel
       )
       .headOption()
 
+  def findByMetadata(metadata: String) =
+    collection
+      .find(
+        equal(nameOf[LightningInvoiceModel](_.metadata), metadata),
+      )
+      .toFuture()
+
   val collectionName: String = LightningInvoicesDAO.collectionName
   override val schemaStr = None // todo Some(LightningInvoicesDAO.schema)
 
-  def findByIdAndPlayer(label: String, playerAccountId: String): Future[Option[LightningInvoiceModel]] =
+  def findByLabelAndMetadata(label: String, metadata: String): Future[Option[LightningInvoiceModel]] =
     collection
       .find(
         Filters.and(
           equal(nameOf[LightningInvoiceModel](_.label), label),
-          equal(nameOf[LightningInvoiceModel](_.metadata), playerAccountId)
+          equal(nameOf[LightningInvoiceModel](_.metadata), metadata)
         )
       )
       .headOption()
 
-  def updateStatus(label: String, status: String): Future[Option[UpdateResult]] =
+  def updateStatus(label: String, status: LightningInvoiceStatus): Future[Option[UpdateResult]] =
     collection
       .updateOne(
         equal(nameOf[LightningInvoiceModel](_.label), label),
-        set(nameOf[LightningInvoiceModel](_.status), status)
+        set(nameOf[LightningInvoiceModel](_.status), status.toString)
       )
       .toFutureOption()
 
@@ -64,7 +71,7 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel
       .limit(perPage)
       .toFuture()
 
-  def update(invoice: ListInvoice): Future[Option[UpdateResult]] =
+  def update(invoice: com.mathbot.pay.lightning.ListInvoice): Future[Option[UpdateResult]] =
     collection
       .updateOne(
         equal(nameOf[LightningInvoiceModel](_.payment_hash), invoice.payment_hash),
@@ -77,8 +84,8 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel
       )
       .toFutureOption()
 
-  def findByStatus(status: LightningInvoiceStatus): Future[Seq[LightningInvoiceModel]] =
-    collection.find(equal(nameOf[LightningInvoiceModel](_.status), status.toString)).toFuture()
+  def findByStatus(status: String): Future[Seq[LightningInvoiceModel]] =
+    collection.find(equal(nameOf[LightningInvoiceModel](_.status), status)).toFuture()
 
   override def createIndexes(): List[SingleObservable[String]] =
     List(
@@ -87,7 +94,7 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel
       collection.createIndex(
         Indexes.ascending(nameOf[LightningInvoiceModel](_.metadata), nameOf[LightningInvoiceModel](_.status))
       ),
-      collection.createIndex(Indexes.ascending(nameOf[LightningInvoiceModel](_.created_at)))
+      createIndex(nameOf[LightningInvoiceModel](_.created_at), false)
     )
 
 }

@@ -2,6 +2,7 @@ package payments.debits
 import com.github.dwickern.macros.NameOf.nameOf
 import com.mathbot.pay.lightning.PayStatus.PayStatus
 import com.mathbot.pay.lightning.{Bolt11, ListPay, PayStatus}
+import com.mongodb.client.model.Indexes
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Updates
 import org.mongodb.scala.model.Updates.currentDate
@@ -14,11 +15,13 @@ import play.api.libs.json.Json
 import scala.concurrent.{ExecutionContext, Future}
 
 class LightningPaymentsDAO(val collection: MongoCollection[LightningPayment])(implicit
-    val executionContext: ExecutionContext
-) extends MongoDAO[LightningPayment] {
+                                                                              val executionContext: ExecutionContext)
+    extends MongoDAO[LightningPayment] {
   val collectionName = LightningPaymentsDAO.collectionName
   def findByBolt11(bolt11: Bolt11): Future[Option[LightningPayment]] =
-    collection.find(equal(nameOf[LightningPayment](_.bolt11), bolt11.toString)).headOption
+    collection.find(equal(nameOf[LightningPayment](_.bolt11), bolt11.bolt11)).headOption
+
+  def findByMetadata(metadata: String) = collection.find(equal(nameOf[LightningPayment](_.metadata), metadata)).toFuture
 
   def updateOne(bolt11: Bolt11, status: PayStatus): Future[Option[UpdateResult]] =
     collection
@@ -39,11 +42,10 @@ class LightningPaymentsDAO(val collection: MongoCollection[LightningPayment])(im
   override def createIndexes() = {
     createUniqueBolt11Index() ::
     createUniqueLabelIndex() ::
-    createTokenIdAndStatusIndex() :: Nil
+    collection.createIndex(
+      Indexes.ascending(nameOf[LightningPayment](_.metadata), nameOf[LightningPayment](_.status))
+    ) :: Nil
   }
-
-  override def insert(t: LightningPayment): Future[Option[Completed]] =
-    super.insert(t.copy(payment_hash = (t.paymentHash)))
 
   override val schemaStr = None // todo  Some(LightningPaymentsDAO.schemaStr)
 }

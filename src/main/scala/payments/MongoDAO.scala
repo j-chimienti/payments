@@ -43,12 +43,6 @@ trait MongoDAO[T] extends StrictLogging {
 
   }
 
-  def createTokenIdAndStatusIndex() = {
-    val t = nameOf[LightningPayment](_.metadata)
-    val s = nameOf[LightningPayment](_.status)
-    collection.createIndex(Indexes.ascending(t, s))
-  }
-
   def createUniqueLabelIndex() = {
     val n = nameOf[LightningPayment](_.label)
     collection
@@ -107,21 +101,23 @@ object MongoDAO extends StrictLogging {
 
   def dropIndexes(c: Set[MongoCollection[_]])(implicit m: Materializer) =
     Source(c)
-      .mapAsyncUnordered(3)(c =>
-        c.dropIndexes()
-          .map(r => Some(r))
-          .recover(err => {
-            logger.warn("Error dropping index error={}", err)
-            None
-          })
-          .toFuture()
+      .mapAsyncUnordered(3)(
+        c =>
+          c.dropIndexes()
+            .map(r => Some(r))
+            .recover(err => {
+              logger.warn("Error dropping index error={}", err)
+              None
+            })
+            .toFuture()
       )
       .runWith(Sink.seq)
 
   def removeValidation[T](db: MongoDatabase, collectionName: String) = {
     db.runCommand(
-      BsonDocument(Json.obj("collMod" -> collectionName, "validationLevel" -> "off").toString)
-    ).toFutureOption()
+        BsonDocument(Json.obj("collMod" -> collectionName, "validationLevel" -> "off").toString)
+      )
+      .toFutureOption()
   }
 
   def createSchema(
@@ -131,18 +127,19 @@ object MongoDAO extends StrictLogging {
       validationAction: String = "error"
   )(db: MongoDatabase) = {
     db.runCommand(
-      BsonDocument(
-        Json
-          .obj(
-            "collMod" -> collectionName,
-            "validator" -> Json.obj(
-              "$jsonSchema" -> jsonSchema
-            ),
-            "validationLevel" -> level.toString,
-            "validationAction" -> validationAction
-          )
-          .toString
+        BsonDocument(
+          Json
+            .obj(
+              "collMod" -> collectionName,
+              "validator" -> Json.obj(
+                "$jsonSchema" -> jsonSchema
+              ),
+              "validationLevel" -> level.toString,
+              "validationAction" -> validationAction
+            )
+            .toString
+        )
       )
-    ).toFutureOption()
+      .toFutureOption()
   }
 }
