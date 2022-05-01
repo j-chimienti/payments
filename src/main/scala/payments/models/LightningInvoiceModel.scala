@@ -33,10 +33,27 @@ case class LightningInvoiceModel(
     status: String,
     paid_at: Option[Instant],
     pay_index: Option[Long],
-    msatoshi_received: Option[MilliSatoshi]
+    amount_msat: Option[MilliSatoshi],
+    amount_received_msat: Option[MilliSatoshi]
 ) {
   lazy val invoiceStatus = LightningInvoiceStatus.withName(status)
   lazy val payStatus = invoiceStatus
+  lazy val listInvoice = ListInvoice(
+    label = label,
+    bolt11 = Some(bolt11),
+    payment_hash = payment_hash,
+    amount_msat = amount_msat,
+    amount_received_msat = amount_received_msat,
+    status = payStatus,
+    pay_index = pay_index,
+    paid_at = paid_at,
+    description = description,
+    expires_at = expires_at,
+    bolt12 = None,
+    local_offer_id = None,
+    payer_note = None,
+    payment_preimage = None,
+  )
 }
 
 object LightningInvoiceModel extends PlayJsonSupport {
@@ -51,8 +68,9 @@ object LightningInvoiceModel extends PlayJsonSupport {
       status = li.status.toString,
       pay_index = None,
       paid_at = li.paid_at,
-      msatoshi_received = li.amount_msat,
-      label = li.label
+      label = li.label,
+      amount_received_msat = li.amount_received_msat,
+      amount_msat = li.amount_msat
     )
 
   def apply(invoice: ListInvoice, playerAccountId: String): LightningInvoiceModel =
@@ -66,8 +84,9 @@ object LightningInvoiceModel extends PlayJsonSupport {
       created_at = Instant.now(),
       status = invoice.status.toString,
       paid_at = invoice.paid_at,
-      msatoshi_received = invoice.amount_msat,
-      label = invoice.label
+      amount_msat = invoice.amount_msat,
+      label = invoice.label,
+      amount_received_msat = invoice.amount_received_msat
     )
 
   implicit lazy val formatLightningInvoiceModel = Json.format[LightningInvoiceModel]

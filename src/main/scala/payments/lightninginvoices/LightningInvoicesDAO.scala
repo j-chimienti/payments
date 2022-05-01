@@ -79,7 +79,8 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel
           set(nameOf[LightningInvoiceModel](_.status), invoice.status.toString),
           set(nameOf[LightningInvoiceModel](_.paid_at), invoice.paid_at.orNull),
           set(nameOf[LightningInvoiceModel](_.pay_index), invoice.pay_index.getOrElse(null)),
-          set(nameOf[LightningInvoiceModel](_.msatoshi_received), invoice.amount_received_msat.getOrElse(null))
+          set(nameOf[LightningInvoiceModel](_.amount_received_msat), invoice.amount_received_msat.getOrElse(null)),
+          set(nameOf[LightningInvoiceModel](_.amount_msat), invoice.amount_msat.getOrElse(null))
         )
       )
       .toFutureOption()
