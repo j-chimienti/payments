@@ -1,8 +1,8 @@
 package payments.codecs
 
+import com.mathbot.pay.SecureIdentifier
 import org.bson.codecs.{Codec, DecoderContext, EncoderContext}
 import org.bson.{BsonReader, BsonWriter}
-import payments.models.SecureIdentifier
 
 class SecureIdentifierCodec extends Codec[SecureIdentifier] {
   override def decode(reader: BsonReader, decoderContext: DecoderContext): SecureIdentifier =

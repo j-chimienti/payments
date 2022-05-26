@@ -2,7 +2,6 @@ package payments.debits
 
 import akka.actor.ActorRef
 import com.mathbot.pay.lightning.Bolt11
-import payments.models.SecureIdentifier
 
 /**
  * Debit request from the player. Needs to be validated before payment
