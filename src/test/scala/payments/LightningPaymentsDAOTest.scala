@@ -5,7 +5,7 @@ import com.mathbot.pay.lightning.PayService.PlayerPayment__IN
 import com.mathbot.pay.lightning.{Bolt11, PayStatus}
 import org.mongodb.scala.MongoWriteException
 import payments.debits.LightningPayment
-import payments.models.SecureIdentifier
+import com.mathbot.pay.SecureIdentifier
 
 class LightningPaymentsDAOTest extends DatabaseSuite {
 
