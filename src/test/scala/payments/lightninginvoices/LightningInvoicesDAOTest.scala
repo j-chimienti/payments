@@ -113,7 +113,7 @@ class LightningInvoicesDAOTest extends DatabaseSuite {
     }
   }
   "update listpay info" in {
-    assert(l.payStatus == LightningInvoiceStatus.unpaid)
+    assert(l.invoiceStatus == LightningInvoiceStatus.unpaid)
     for {
       _ <- lightningInvoicesDAO.insert(l)
       r <- lightningInvoicesDAO.update(
@@ -122,7 +122,7 @@ class LightningInvoicesDAOTest extends DatabaseSuite {
       c <- lightningInvoicesDAO.findByBolt11(l.bolt11)
     } yield {
       assert(r.isDefined)
-      assert(c.value.payStatus === LightningInvoiceStatus.expired)
+      assert(c.value.invoiceStatus === LightningInvoiceStatus.expired)
     }
   }
 
@@ -132,6 +132,17 @@ class LightningInvoicesDAOTest extends DatabaseSuite {
       r <- lightningInvoicesDAO.findByBolt11(l.bolt11)
     } yield {
       assert(r.isDefined)
+    }
+  }
+
+  "compareToSchema" in {
+    for {
+      _ <- lightningInvoicesDAO.insert(l)
+      r <- lightningInvoicesDAO.findByBolt11(l.bolt11)
+      c <- lightningInvoicesDAO.compareToSchema
+    } yield {
+      assert(r.isDefined)
+      assert(c.isRight)
     }
   }
 

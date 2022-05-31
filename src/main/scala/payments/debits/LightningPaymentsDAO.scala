@@ -39,6 +39,9 @@ class LightningPaymentsDAO(val collection: MongoCollection[LightningPayment])(im
 
   def findPending: Future[Seq[LightningPayment]] =
     collection.find(equal(nameOf[LightningPayment](_.status), PayStatus.pending.toString)).toFuture()
+  def findByStatus(s: PayStatus): Future[Seq[LightningPayment]] =
+    collection.find(equal(nameOf[LightningPayment](_.status), s.toString)).toFuture()
+
   override def createIndexes() = {
     createUniqueBolt11Index() ::
     createUniqueLabelIndex() ::
@@ -47,7 +50,7 @@ class LightningPaymentsDAO(val collection: MongoCollection[LightningPayment])(im
     ) :: Nil
   }
 
-  override val schemaStr = None // todo  Some(LightningPaymentsDAO.schemaStr)
+  override val schemaStr = Some(LightningPaymentsDAO.schemaStr)
 }
 
 object LightningPaymentsDAO {

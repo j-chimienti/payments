@@ -7,6 +7,7 @@ import com.github.dwickern.macros.NameOf.nameOf
 import com.mongodb.client.model.{Indexes, ReturnDocument}
 import com.typesafe.scalalogging.StrictLogging
 import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.model.Filters.jsonSchema
 import org.mongodb.scala.model.{FindOneAndUpdateOptions, IndexOptions}
 import org.mongodb.scala.{Completed, MongoCollection, MongoDatabase, SingleObservable}
 import payments.debits.LightningPayment
@@ -67,29 +68,37 @@ trait MongoDAO[T] extends StrictLogging {
 
   def schemaStr: Option[JsValue] = None
 
-  //  /**
-  //   *
-  //   * @return the documents that pass validation
-  //   */
-  //  def findBySchema: Future[Seq[T]] =
-  //    schemaStr match {
-  //      case Some(value) =>
-  //        collection.find[](jsonSchema(BsonDocument(value.toString))).toFuture()
-  //      case None =>
-  //        logger.info("No schema define for collection={}", collectionName)
-  //        FastFuture.successful(Seq())
-  //    }
-  //
-  //  def compareToSchema = {
-  //    for {
-  //      c <- count
-  //      f <- findBySchema
-  //    } yield {
-  //      if (c != f.length) logger.warn("Validation failed collection={} items={}", collectionName, math.abs(c - f.size))
-  //      (c, f)
-  //    }
-  //
-  //  }
+  /**
+   *
+   * @return the documents that pass validation
+   */
+  def findBySchema: Future[Either[String, Seq[BsonDocument]]] =
+    schemaStr
+      .map(
+        value =>
+          collection
+            .withDocumentClass[BsonDocument]
+            .find(jsonSchema(BsonDocument(value.toString)))
+            .toFuture()
+            .map(Right(_))
+      )
+      .getOrElse(FastFuture.successful(Left(s"No schema define for collection=${collection}")))
+
+  def compareToSchema: Future[Either[(String, String, Long), Long]] =
+    for {
+      numOfDocs <- count
+      validSchemaItems <- findBySchema
+    } yield {
+
+      validSchemaItems
+        .map(f => {
+          if (numOfDocs != f.length)
+            Left("Validation failed collection={} items={}", collectionName, math.abs(numOfDocs - f.size))
+          else Right(numOfDocs)
+        })
+        .getOrElse(Left("Validation failed collection={} items={}", collectionName, numOfDocs))
+    }
+
 }
 
 object MongoDAO extends StrictLogging {
@@ -97,6 +106,26 @@ object MongoDAO extends StrictLogging {
   object ValidationLevels extends Enumeration {
     type ValidationLevels = Value
     val strict, moderate = Value
+  }
+
+  def refreshValidations(collections: Set[(JsValue, String)], db: MongoDatabase)(implicit m: Materializer,
+                                                                                 ec: ExecutionContext) = {
+    Source(collections)
+      .mapAsyncUnordered(parallelism = 1) {
+        case (schema, dao) =>
+          (for {
+            a <- removeValidation(db, dao)
+            c <- createSchema(
+              jsonSchema = schema,
+              collectionName = dao,
+              level = ValidationLevels.strict,
+            )(db)
+          } yield (dao, a, c)) recover (err => {
+            logger.warn(s"Error creating validation collection={} error={}", dao, err)
+            (dao, None, None)
+          })
+      }
+      .runWith(Sink.seq)
   }
 
   def dropIndexes(c: Set[MongoCollection[_]])(implicit m: Materializer) =

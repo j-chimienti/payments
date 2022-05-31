@@ -1,5 +1,6 @@
 package payments.wiring
 
+import akka.stream.Materializer
 import com.softwaremill.macwire.{wire, wireSet}
 import org.bson.codecs.Codec
 import org.bson.codecs.configuration.CodecRegistries.{fromProviders, fromRegistries}
@@ -53,4 +54,11 @@ trait PaymentsDatabaseWiring {
   lazy val daos = wireSet[MongoDAO[_]]
 
   def createIndexes() = Future.sequence(daos.flatMap(d => d.createIndexes().map(_.toFutureOption())))
+
+  def refreshAllValidations(implicit m: Materializer) = {
+    val s = daos.collect {
+      case d if d.schemaStr.isDefined => (d.schemaStr.get, d.collectionName)
+    }
+    MongoDAO.refreshValidations(s, db)
+  }
 }

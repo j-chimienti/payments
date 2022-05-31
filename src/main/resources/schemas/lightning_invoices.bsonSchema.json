@@ -2,15 +2,17 @@
     "bsonType": "object",
     "additionalProperties": true,
     "required": [
-        "tokenId",
+        "metadata",
         "status",
         "label",
+        "description",
+        "payment_hash",
         "bolt11",
-        "starSystem",
-        "expires_at"
+        "expires_at",
+        "created_at"
     ],
     "properties": {
-        "tokenId": {
+        "metadata": {
             "bsonType": "string"
         },
         "status": {
@@ -34,8 +36,23 @@
                 "string"
             ]
         },
-        "starSystem": {
-            "bsonType": "string"
+        "local_offer_id": {
+            "bsonType": [
+                "null",
+                "string"
+            ]
+        },
+        "payer_note": {
+            "bsonType": [
+                "null",
+                "string"
+            ]
+        },
+        "payment_preimage": {
+            "bsonType": [
+                "null",
+                "string"
+            ]
         },
         "pay_index": {
             "oneOf": [

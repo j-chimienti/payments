@@ -34,48 +34,51 @@ case class LightningInvoiceModel(
     paid_at: Option[Instant],
     pay_index: Option[Long],
     amount_msat: Option[MilliSatoshi],
-    amount_received_msat: Option[MilliSatoshi]
+    amount_received_msat: Option[MilliSatoshi],
+    bolt12: Option[String] = None,
+    local_offer_id: Option[String] = None,
+    payer_note: Option[String] = None,
+    payment_preimage: Option[String] = None
 ) {
-  lazy val invoiceStatus = LightningInvoiceStatus.withName(status)
-  lazy val payStatus = invoiceStatus
   lazy val listInvoice = ListInvoice(
     label = label,
     bolt11 = Some(bolt11),
     payment_hash = payment_hash,
     amount_msat = amount_msat,
     amount_received_msat = amount_received_msat,
-    status = payStatus,
+    status = LightningInvoiceStatus.withName(status),
     pay_index = pay_index,
     paid_at = paid_at,
     description = description,
     expires_at = expires_at,
-    bolt12 = None,
-    local_offer_id = None,
-    payer_note = None,
-    payment_preimage = None,
+    bolt12 = bolt12,
+    local_offer_id = local_offer_id,
+    payer_note = payer_note,
+    payment_preimage = payment_preimage,
   )
+  val invoiceStatus = LightningInvoiceStatus.withName(status)
 }
 
 object LightningInvoiceModel extends PlayJsonSupport {
-  def apply(invoice: CreateInvoiceWithDescriptionHash, li: ListInvoice, playerAccountId: String) =
+  def apply(invoice: CreateInvoiceWithDescriptionHash, li: ListInvoice, metadata: String) =
     new LightningInvoiceModel(
-      metadata = playerAccountId,
+      metadata = metadata,
       bolt11 = invoice.bolt11,
       description = li.description,
       payment_hash = invoice.payment_hash,
       expires_at = invoice.expires_at,
       created_at = Instant.now(),
       status = li.status.toString,
-      pay_index = None,
+      pay_index = li.pay_index,
       paid_at = li.paid_at,
       label = li.label,
       amount_received_msat = li.amount_received_msat,
       amount_msat = li.amount_msat
     )
 
-  def apply(invoice: ListInvoice, playerAccountId: String): LightningInvoiceModel =
+  def apply(invoice: ListInvoice, metadata: String): LightningInvoiceModel =
     LightningInvoiceModel(
-      metadata = playerAccountId,
+      metadata = metadata,
       payment_hash = invoice.payment_hash,
       bolt11 = invoice.bolt11.get,
       pay_index = invoice.pay_index,

@@ -92,6 +92,26 @@ class LightningPaymentsDAOTest extends DatabaseSuite {
 
       }
     }
-  }
+    "compareToSchema" in {
+      for {
+        Some(_) <- lightningPaymentsDAO.insert(pendingDebit)
+        Some(_) <- lightningPaymentsDAO.insert(
+          pendingDebit
+            .copy(status = PayStatus.complete.toString,
+                  bolt11 = b2,
+                  payment_hash = b2.invoice.paymentHash.toString,
+                  label = SecureIdentifier(8).toString.some)
+        )
+        pendingDebits <- lightningPaymentsDAO.findPending
+        c <- lightningPaymentsDAO.count
+        v <- lightningInvoicesDAO.compareToSchema
 
+      } yield {
+        pendingDebits.length shouldBe 1
+        c shouldBe 2
+        assert(v.isRight)
+
+      }
+    }
+  }
 }

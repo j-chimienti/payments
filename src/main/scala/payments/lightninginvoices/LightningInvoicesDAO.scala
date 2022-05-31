@@ -43,7 +43,7 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel
       .toFuture()
 
   val collectionName: String = LightningInvoicesDAO.collectionName
-  override val schemaStr = None // todo Some(LightningInvoicesDAO.schema)
+  override val schemaStr = Some(LightningInvoicesDAO.schema)
 
   def findByLabelAndMetadata(label: String, metadata: String): Future[Option[LightningInvoiceModel]] =
     collection
