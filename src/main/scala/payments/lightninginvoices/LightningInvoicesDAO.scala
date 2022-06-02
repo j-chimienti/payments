@@ -1,26 +1,26 @@
 package payments.lightninginvoices
 
 import com.github.dwickern.macros.NameOf.nameOf
-import com.mathbot.pay.lightning.Bolt11
+import com.mathbot.pay.lightning.{Bolt11, LightningInvoiceStatus}
 import com.mathbot.pay.lightning.LightningInvoiceStatus.LightningInvoiceStatus
 import org.mongodb.scala.model.Filters.equal
-import org.mongodb.scala.model.Indexes.descending
+import org.mongodb.scala.model.Indexes.{ascending, descending}
 import org.mongodb.scala.model.Updates.{combine, set}
-import org.mongodb.scala.model._
+import org.mongodb.scala.model.{IndexOptions, _}
 import org.mongodb.scala.result.UpdateResult
 import org.mongodb.scala.{MongoCollection, SingleObservable}
 import payments.MongoDAO
 import payments.models.LightningInvoiceModel
 import play.api.libs.json.{JsValue, Json}
 
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.io.Source
 import scala.language.postfixOps
 
 object LightningInvoicesDAO {
   val collectionName = "invoices_lightning"
-
-  val schema: JsValue =
+  lazy val schema: JsValue =
     Json.parse(Source.fromResource("schemas/lightning_invoices.bsonSchema.json").getLines().mkString(""))
 
 }
@@ -86,6 +86,7 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel
         combine(
           set(nameOf[LightningInvoiceModel](_.status), invoice.status.toString),
           set(nameOf[LightningInvoiceModel](_.paid_at), invoice.paid_at.orNull),
+          set(nameOf[LightningInvoiceModel](_.payment_preimage), invoice.payment_preimage.orNull),
           set(nameOf[LightningInvoiceModel](_.pay_index), invoice.pay_index.getOrElse(null)),
           set(nameOf[LightningInvoiceModel](_.amount_received_msat), invoice.amount_received_msat.getOrElse(null)),
           set(nameOf[LightningInvoiceModel](_.amount_msat), invoice.amount_msat.getOrElse(null))
@@ -96,6 +97,13 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel
   def findByStatus(status: LightningInvoiceStatus): Future[Seq[LightningInvoiceModel]] =
     collection.find(equal(nameOf[LightningInvoiceModel](_.status), status.toString)).toFuture()
 
+  def expiredInvoicesTTL =
+    collection.createIndex(
+      ascending(nameOf[LightningInvoiceModel](_.created_at)),
+      expireAfter(7.days).partialFilterExpression(
+        equal(nameOf[LightningInvoiceModel](_.status), LightningInvoiceStatus.expired.toString)
+      )
+    )
   override def createIndexes(): List[SingleObservable[String]] =
     List(
       createIndex(nameOf[LightningInvoiceModel](_.label), true),
@@ -104,7 +112,8 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel
       collection.createIndex(
         Indexes.ascending(nameOf[LightningInvoiceModel](_.metadata), nameOf[LightningInvoiceModel](_.status))
       ),
-      createIndex(nameOf[LightningInvoiceModel](_.created_at), false)
+      createIndex(nameOf[LightningInvoiceModel](_.created_at), false),
+      expiredInvoicesTTL
     )
 
 }
