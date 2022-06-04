@@ -1,8 +1,8 @@
 package payments.lightninginvoices
 
 import com.github.dwickern.macros.NameOf.nameOf
-import com.mathbot.pay.lightning.{Bolt11, LightningInvoiceStatus}
 import com.mathbot.pay.lightning.LightningInvoiceStatus.LightningInvoiceStatus
+import com.mathbot.pay.lightning.{Bolt11, LightningInvoiceStatus}
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.{ascending, descending}
 import org.mongodb.scala.model.Updates.{combine, set}
@@ -97,6 +97,9 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel
   def findByStatus(status: LightningInvoiceStatus): Future[Seq[LightningInvoiceModel]] =
     collection.find(equal(nameOf[LightningInvoiceModel](_.status), status.toString)).toFuture()
 
+  def findByPaymentHash(ph: String): Future[Seq[LightningInvoiceModel]] =
+    collection.find(equal(nameOf[LightningInvoiceModel](_.payment_hash), ph)).toFuture()
+
   def expiredInvoicesTTL =
     collection.createIndex(
       ascending(nameOf[LightningInvoiceModel](_.created_at)),
@@ -104,16 +107,20 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel
         equal(nameOf[LightningInvoiceModel](_.status), LightningInvoiceStatus.expired.toString)
       )
     )
+
   override def createIndexes(): List[SingleObservable[String]] =
     List(
       createIndex(nameOf[LightningInvoiceModel](_.label), true),
       createIndex(nameOf[LightningInvoiceModel](_.bolt11), true),
-      // todo: unique index on payment_hash https://stackoverflow.com/questions/35755628/unique-index-in-mongodb-3-2-ignoring-null-values
       collection.createIndex(
         Indexes.ascending(nameOf[LightningInvoiceModel](_.metadata), nameOf[LightningInvoiceModel](_.status))
       ),
       createIndex(nameOf[LightningInvoiceModel](_.created_at), false),
-      expiredInvoicesTTL
+      collection.createIndex(
+        ascending(nameOf[LightningInvoiceModel](_.payment_hash)),
+        IndexOptions().unique(true)
+      ),
+      expiredInvoicesTTL,
     )
 
 }
