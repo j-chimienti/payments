@@ -4,6 +4,7 @@ import akka.http.scaladsl.util.FastFuture
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import com.github.dwickern.macros.NameOf.nameOf
+import com.mongodb.MongoWriteException
 import com.mongodb.client.model.{Indexes, ReturnDocument}
 import com.typesafe.scalalogging.StrictLogging
 import org.mongodb.scala.bson.BsonDocument
@@ -97,6 +98,12 @@ trait MongoDAO[T] extends StrictLogging {
           else Right(numOfDocs)
         })
         .getOrElse(Left("Validation failed collection={} items={}", collectionName, numOfDocs))
+    }
+
+  def isDuplicateException(err: Throwable): Boolean =
+    err match {
+      case e: MongoWriteException => e.getCode == 11000
+      case _ => false
     }
 
 }
