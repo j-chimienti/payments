@@ -97,8 +97,8 @@ class LightningInvoicesDAO(val collection: MongoCollection[LightningInvoiceModel
   def findByStatus(status: LightningInvoiceStatus): Future[Seq[LightningInvoiceModel]] =
     collection.find(equal(nameOf[LightningInvoiceModel](_.status), status.toString)).toFuture()
 
-  def findByPaymentHash(ph: String): Future[Seq[LightningInvoiceModel]] =
-    collection.find(equal(nameOf[LightningInvoiceModel](_.payment_hash), ph)).toFuture()
+  def findByPaymentHash(ph: String): Future[Option[LightningInvoiceModel]] =
+    collection.find(equal(nameOf[LightningInvoiceModel](_.payment_hash), ph)).headOption()
 
   def expiredInvoicesTTL =
     collection.createIndex(
