@@ -13,7 +13,7 @@ object Dependencies {
   val akkaHttpV = "10.2.4"
   val akkaV = "2.6.15"
   val sttpV = "3.3.11"
-  val mongoV = "2.9.0"
+  val mongoV = "4.3.0"
   val mockitoScalaV = "1.13.7"
   val guavaV = "28.1-jre"
   val slf4jV = "2.0.0-alpha1"

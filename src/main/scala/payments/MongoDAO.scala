@@ -10,7 +10,8 @@ import com.typesafe.scalalogging.StrictLogging
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.jsonSchema
 import org.mongodb.scala.model.{FindOneAndUpdateOptions, IndexOptions}
-import org.mongodb.scala.{Completed, MongoCollection, MongoDatabase, SingleObservable}
+import org.mongodb.scala.result.{InsertManyResult, InsertOneResult}
+import org.mongodb.scala.{MongoCollection, MongoDatabase, SingleObservable}
 import payments.debits.LightningPayment
 import play.api.libs.json.{JsValue, Json}
 
@@ -59,9 +60,9 @@ trait MongoDAO[T] extends StrictLogging {
 
   }
 
-  def insert(t: T): Future[Option[Completed]] = collection.insertOne(t).toFutureOption()
+  def insert(t: T): Future[Option[InsertOneResult]] = collection.insertOne(t).toFutureOption()
 
-  def insertMany(t: Seq[T]): Future[Option[Completed]] =
+  def insertMany(t: Seq[T]): Future[Option[InsertManyResult]] =
     if (t.isEmpty) FastFuture.successful(None)
     else collection.insertMany(t).toFutureOption()
 

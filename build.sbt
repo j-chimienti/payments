@@ -1,8 +1,7 @@
 import Dependencies._
 import sbt._
 
-
-addCommandsAlias("validate", "clean" :: "compile":: "test:compile" :: "scalafmtCheckAll" :: Nil)
+addCommandsAlias("validate", "clean" :: "compile" :: "test:compile" :: "scalafmtCheckAll" :: Nil)
 addCommandsAlias("fmt", Seq("scalafmt", "test:scalafmt", "it:scalafmt"))
 addCommandsAlias("generateCoverageReport", "clean" :: "coverage" :: "test" :: "coverageReport" :: Nil)
 addCommandsAlias("githubWorkflow", Seq("validate", "coverage", "test", "coverageReport"))
@@ -10,7 +9,6 @@ addCommandsAlias("githubWorkflow", Seq("validate", "coverage", "test", "coverage
 addCommandsAlias("cc", Seq("clean", "compile"))
 addCommandAlias("err", "lastGrep error compile")
 addCommandAlias("errt", "lastGrep error test:compile")
-
 
 val scala213 = "2.13.3"
 // This Dependencies is only used when running sbt from the pay-model root.  Otherwise it will use the Dependencies
@@ -29,7 +27,6 @@ val commonSettings = Seq(
     //  "-Xfatal-warnings", // causes the compiler to fail if there are any warnings
   )
 )
-
 
 val commonDeps = Seq(
   playJson,
@@ -53,7 +50,6 @@ val commonDeps = Seq(
 val paymodelV = "b5746a67f5341c62671b558743cb81679aaae5d2"
 lazy val paymodel = RootProject(uri(s"https://github.com/JWWeatherman/pay-model.git#$paymodelV"))
 
-
 lazy val payments = (project in file("."))
   .settings(commonSettings: _*)
   .configs(IntegrationTest)
@@ -66,7 +62,7 @@ lazy val payments = (project in file("."))
     coverageHighlighting := true,
     organization := "com.mathbot",
     scalaVersion := scala213,
-    Defaults.itSettings,
+    Defaults.itSettings
   )
   .dependsOn(paymodel)
   .aggregate(paymodel)
