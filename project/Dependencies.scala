@@ -5,7 +5,7 @@ object Dependencies {
   val macwireVersion = "2.3.3"
   val scalaTestVersion = "3.1.1"
   val scalaTestPlayVersion = "4.0.0"
-  val akkaVersion = "2.6.15"
+  val akkaVersion = "2.6.18"
 
   val playJsonV = "2.9.2"
   val macwireV = "2.3.7"
