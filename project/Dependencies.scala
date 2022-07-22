@@ -11,7 +11,7 @@ object Dependencies {
   val macwireV = "2.3.7"
   val scalaTestV = "3.1.1"
   val akkaHttpV = "10.2.4"
-  val akkaV = "2.6.15"
+  val akkaV = "2.6.18"
   val sttpV = "3.3.11"
   val mongoV = "4.3.0"
   val mockitoScalaV = "1.13.7"
