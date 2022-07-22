@@ -47,8 +47,8 @@ val commonDeps = Seq(
 //  scodec
 ) ++ sttp ++ macwire ++ logging
 
-val paymodelV = "b19eb4894724530097bc92c42748e7ed389462b3"
-lazy val paymodel = RootProject(uri(s"https://github.com/JWWeatherman/pay-model.git#$paymodelV"))
+val payModelCommit = "730a0fc0ecd448be1f776d722a72916775a1b3a5"
+lazy val paymodel = RootProject(uri(s"https://github.com/JWWeatherman/pay-model.git#$payModelCommit"))
 
 lazy val payments = (project in file("."))
   .settings(commonSettings: _*)
