@@ -75,7 +75,7 @@ class DatabaseLightningService(
       d = LightningPayment.pending(debitRequest)
       _ <- EitherT.liftF(debitsDAO.insert(d))
       // todo: use player payment
-      r <- EitherT(service.pay(Pay(debitRequest.bolt11)).map(_.body.left.map(_.error.message)))
+      r <- EitherT(service.pay(Pay(debitRequest.bolt11)).map(_.body.left.map(_.message)))
       _ <- OptionT(debitsDAO.updateOne(debitRequest.bolt11, r.status)).toRight(s"error updating debit")
     } yield r
   def updateLightningDebit(bolt11: Bolt11) =
