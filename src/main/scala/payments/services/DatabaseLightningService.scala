@@ -17,8 +17,8 @@ class DatabaseLightningService(
     debitsDAO: LightningPaymentsDAO,
     lightningInvoicesDAO: LightningInvoicesDAO
 )(implicit
-    ec: ExecutionContext
-) extends StrictLogging {
+  ec: ExecutionContext)
+    extends StrictLogging {
 
   //////////////////// CREDITS ////////////////////
 
@@ -27,7 +27,7 @@ class DatabaseLightningService(
       value <- EitherT(service.invoice(inv).map(_.body))
       li <- EitherT(service.getInvoiceByPaymentHash(payment_hash = value.payment_hash).map(_.body))
       j <- OptionT(lightningInvoicesDAO.insert(LightningInvoiceModel(li, playerAccountId)))
-        .toRight(LightningRequestError(ErrorMsg(500, "Error inserting invoice")))
+        .toRight(LightningRequestError(500, "Error inserting invoice"))
     } yield li
 
   def poll(payment_hash: String): EitherT[Future, LightningRequestError, ListInvoice] = {
@@ -90,8 +90,7 @@ class DatabaseLightningService(
             case _ =>
               logger.info(s"Update debit request status to ${PayStatus.failed}")
               debitsDAO.updateOne(bolt11 = bolt11, status = PayStatus.failed) map (_ => Left(s"Not found ${bolt11}"))
-          }
-        else {
+          } else {
           val msg = s"${res.code} received from pay server"
           logger.warn(msg)
           FastFuture.successful(Left(msg))
