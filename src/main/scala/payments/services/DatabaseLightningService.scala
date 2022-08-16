@@ -23,6 +23,7 @@ class DatabaseLightningService(
 
   //////////////////// CREDITS ////////////////////
 
+  // TODO: prevent 2nd api call
   def invoice(inv: LightningInvoice, playerAccountId: String): EitherT[Future, LightningRequestError, ListInvoice] =
     for {
       value <- EitherT(service.invoice(inv).map(_.body))
