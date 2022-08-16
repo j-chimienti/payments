@@ -9,6 +9,7 @@ import com.typesafe.scalalogging.StrictLogging
 import payments.debits.{LightningPayment, LightningPaymentsDAO}
 import payments.lightninginvoices.LightningInvoicesDAO
 import payments.models.LightningInvoiceModel
+import sttp.client3
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -30,19 +31,16 @@ class DatabaseLightningService(
         .toRight(LightningRequestError(500, "Error inserting invoice"))
     } yield li
 
-  def poll(payment_hash: String): EitherT[Future, LightningRequestError, ListInvoice] = {
-    import LightningInvoiceStatus._
+  def poll(payment_hash: String): Future[client3.Response[Either[LightningRequestError, ListInvoice]]] =
     for {
-      value <- EitherT(service.getInvoiceByPaymentHash(payment_hash).map(_.body))
-      _ <- EitherT.liftF {
-        value.status match {
-          case `paid` | `expired` =>
-            lightningInvoicesDAO.update(value).map(_ => "updated")
-          case `unpaid` => FastFuture.successful("skipped update")
-        }
+      value <- service.getInvoiceByPaymentHash(payment_hash)
+      _ <- value.body match {
+        case Right(listInvoice) if listInvoice.isPaid || listInvoice.isExpired =>
+          lightningInvoicesDAO.update(listInvoice)
+        case _ =>
+          FastFuture.successful("Skipping invoice updating")
       }
     } yield value
-  }
 
   def invoiceWithDescriptionHash(
       i: InvoiceWithDescriptionHash,
