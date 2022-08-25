@@ -11,9 +11,8 @@ addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.2")
 
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.10.0")
 
-// sbt coverage test coverageReport -- generate test coverage report
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.6.1")
-
+// sbt coverage test coverageReport
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.9.3")
 // Revolver allows us to use re-start and work a lot faster!
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
 // Native Packager allows us to create standalone jar
