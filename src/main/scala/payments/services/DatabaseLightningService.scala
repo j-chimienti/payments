@@ -32,6 +32,25 @@ class DatabaseLightningService(
         .toRight(LightningRequestError(500, "Error inserting invoice"))
     } yield li
 
+  def createInvoice(inv: com.mathbot.pay.lightning.PayService.PlayerInvoice__IN, playerAccountId: String) = {
+    val f = for {
+      listInvoice <- EitherT(
+        service
+          .asInstanceOf[PayService]
+          .playerInvoiceV2(
+            inv
+          )
+          .map(_.body.left.map(_.toString))
+      )
+      _ <- OptionT(lightningInvoicesDAO.insert(LightningInvoiceModel(listInvoice, playerAccountId)))
+        .toRight("failed to insert invoice")
+    } yield {
+      (inv, listInvoice)
+    }
+
+    f.value.map(_.left.map(e => (inv, e)))
+  }
+
   def poll(payment_hash: String): Future[client3.Response[Either[LightningRequestError, ListInvoice]]] =
     for {
       value <- service.getInvoiceByPaymentHash(payment_hash)

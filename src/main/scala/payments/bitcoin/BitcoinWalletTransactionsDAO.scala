@@ -9,33 +9,34 @@ import payments.MongoDAO
 import java.time.Instant
 import scala.concurrent.ExecutionContext
 
-object BitcoinInvoice {
-  def apply(address: String, tx: WalletTransaction, metadata: String) = {
-    new BitcoinInvoice(address = address,
-                       metadata = metadata,
-                       received = tx.timereceived,
-                       satoshi = tx.amount.toSatoshi,
-                       hex = Some(tx.txid),
-                       confirmations = tx.confirmations)
+object BitcoinWalletTransaction {
+  def apply(address: String, tx: WalletTransaction, metadata: String): BitcoinWalletTransaction = {
+    new BitcoinWalletTransaction(address = address,
+                                 metadata = metadata,
+                                 received = tx.timereceived,
+                                 satoshi = tx.amount.toSatoshi,
+                                 hex = Some(tx.txid),
+                                 confirmations = tx.confirmations)
   }
 }
 
-case class BitcoinInvoice(address: String,
-                          metadata: String,
-                          received: Instant,
-                          confirmations: Int,
-                          satoshi: Satoshi,
-                          hex: Option[TxId])
+case class BitcoinWalletTransaction(address: String,
+                                    metadata: String,
+                                    received: Instant,
+                                    confirmations: Int,
+                                    satoshi: Satoshi,
+                                    hex: Option[TxId])
 
-object BitcoinInvoicesDAO {
+object BitcoinWalletTransactionsDAO {
   val collectionName = "bitcoin_invoices"
 }
-class BitcoinInvoicesDAO(val collection: MongoCollection[BitcoinInvoice])(implicit
-                                                                          val executionContext: ExecutionContext)
-    extends MongoDAO[BitcoinInvoice] {
+class BitcoinWalletTransactionsDAO(val collection: MongoCollection[BitcoinWalletTransaction])(
+    implicit
+    val executionContext: ExecutionContext
+) extends MongoDAO[BitcoinWalletTransaction] {
   override def createIndexes(): List[SingleObservable[String]] = List(
 //    createIndex(nameOf[BitcoinInvoice](_.hex), unique = true)
   )
 
-  override def collectionName: String = BitcoinInvoicesDAO.collectionName
+  override def collectionName: String = BitcoinWalletTransactionsDAO.collectionName
 }
