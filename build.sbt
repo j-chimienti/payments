@@ -28,17 +28,17 @@ val commonSettings = Seq(
   )
 )
 
+lazy val paymodel = "com.mathbot" %% "pay-model" % "0.0.1"
+
 val commonDeps = Seq(
   playJson,
   bitcoinj,
+  paymodel,
   sttpModel,
   cats,
   scalaTest,
   akkaActor,
   requests,
-//  akkaStream,
-//  akkaStreamTestkit,
-//  akkaTestkit,
   scalactic,
   mockito,
   nameOf,
@@ -47,16 +47,13 @@ val commonDeps = Seq(
 //  scodec
 ) ++ sttp ++ macwire ++ logging
 
-val payModelCommit = "99fecca5a3af6118f82d43899e93b49012f78277"
-lazy val paymodel = RootProject(uri(s"https://github.com/JWWeatherman/pay-model.git#$payModelCommit"))
-
 lazy val payments = (project in file("."))
   .settings(commonSettings: _*)
   .configs(IntegrationTest)
   .settings(
     name := "payments",
     version := "0.0.1",
-    coverageMinimum := 70,
+    coverageMinimumStmtTotal := 70,
     libraryDependencies := commonDeps,
     coverageFailOnMinimum := false,
     coverageHighlighting := true,
@@ -64,8 +61,8 @@ lazy val payments = (project in file("."))
     scalaVersion := scala213,
     Defaults.itSettings
   )
-  .dependsOn(paymodel)
-  .aggregate(paymodel)
+//  .dependsOn(paymodel)
+//  .aggregate(paymodel)
 
 def addCommandsAlias(name: String, cmds: Seq[String]) =
   addCommandAlias(name, cmds.mkString(";", ";", ""))
